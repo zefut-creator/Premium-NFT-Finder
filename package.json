@@ -1,16 +1,15 @@
 {
   "name": "premium-nft-finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Opt-in Telegram directory for users who voluntarily share Premium and NFT gift information",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
     "node-telegram-bot-api": "^0.66.0"
   }
 }
