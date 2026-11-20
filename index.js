@@ -73,18 +73,18 @@ function userLabel(row) {
 async function showHome(chatId, name) {
   await bot.sendMessage(
     chatId,
-    'Привет, ' + (name || 'друг') + '!\\n\\n' +
+    'Привет, ' + (name || 'друг') + '!\n\n' +
       'Это добровольный каталог участников, которые сами указали наличие Telegram Premium или NFT-подарков. ' +
-      'Бот не сканирует Telegram и не проверяет скрытые данные.\\n\\nВыбери действие:',
+      'Бот не сканирует Telegram и не проверяет скрытые данные.\n\nВыбери действие:',
     { reply_markup: mainKeyboard() }
   );
 }
 
-bot.onText(/\\/start(?:\\s+(.+))?/, async (msg, match) => {
+bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
   try {
     const id = msg.from.id;
     const rawRef = match && match[1] ? match[1].trim() : '';
-    const refMatch = rawRef.match(/^ref_(\\d+)$/);
+    const refMatch = rawRef.match(/^ref_(\d+)$/);
     const referrer = refMatch ? Number(refMatch[1]) : null;
     const existing = getUser.get(id);
     const safeReferrer = referrer && referrer !== id && getUser.get(referrer) ? referrer : null;
@@ -103,7 +103,7 @@ bot.onText(/\\/start(?:\\s+(.+))?/, async (msg, match) => {
   }
 });
 
-bot.onText(/\\/help/, msg => showHome(msg.chat.id, msg.from.first_name));
+bot.onText(/\/help/, msg => showHome(msg.chat.id, msg.from.first_name));
 
 bot.on('callback_query', async query => {
   try {
@@ -145,9 +145,9 @@ bot.on('callback_query', async query => {
       const premium = u.premium === 'yes' ? 'Есть' : u.premium === 'no' ? 'Нет' : 'Не указано';
       const nft = u.has_nft === 'yes' ? 'Есть' : u.has_nft === 'no' ? 'Нет' : 'Не указано';
       return bot.sendMessage(chatId,
-        '👤 Твой профиль\\nUsername: ' + (u.username ? '@' + u.username : 'не указан') +
-        '\\nPremium: ' + premium + '\\nNFT-подарки: ' + nft +
-        '\\nКоллекции: ' + (u.collections || 'не указаны'),
+        '👤 Твой профиль\nUsername: ' + (u.username ? '@' + u.username : 'не указан') +
+        '\nPremium: ' + premium + '\nNFT-подарки: ' + nft +
+        '\nКоллекции: ' + (u.collections || 'не указаны'),
         { reply_markup: mainKeyboard() });
     }
 
@@ -155,8 +155,8 @@ bot.on('callback_query', async query => {
       const link = 'https://t.me/' + (await bot.getMe()).username + '?start=ref_' + id;
       const count = db.prepare('SELECT COUNT(*) AS n FROM users WHERE referred_by = ?').get(id).n;
       return bot.sendMessage(chatId,
-        '🔗 Твоя ссылка:\\n' + link + '\\n\\nПриглашено: ' + count +
-        '\\n\\nРеферал засчитывается после первого запуска бота новым пользователем.',
+        '🔗 Твоя ссылка:\n' + link + '\n\nПриглашено: ' + count +
+        '\n\nРеферал засчитывается после первого запуска бота новым пользователем.',
         { reply_markup: mainKeyboard() });
     }
 
@@ -166,13 +166,13 @@ bot.on('callback_query', async query => {
         'SELECT username, display_name, collections FROM users WHERE ' + field + " = 'yes' ORDER BY updated_at DESC LIMIT 20"
       ).all();
       const title = field === 'premium' ? '⭐ Участники с Premium' : '🎁 Владельцы NFT-подарков';
-      if (!rows.length) return bot.sendMessage(chatId, title + '\\nПока никто не указал эту информацию.');
+      if (!rows.length) return bot.sendMessage(chatId, title + '\nПока никто не указал эту информацию.');
       const lines = rows.map((u, i) => {
         const collection = field === 'has_nft' && u.collections ? ' — ' + u.collections : '';
         return (i + 1) + '. ' + userLabel(u) + collection;
       });
-      return bot.sendMessage(chatId, title + '\\n\\n' + lines.join('\\n') +
-        '\\n\\nПоказаны только участники, которые добровольно заполнили профиль.');
+      return bot.sendMessage(chatId, title + '\n\n' + lines.join('\n') +
+        '\n\nПоказаны только участники, которые добровольно заполнили профиль.');
     }
 
     if (data === 'delete_me') {
@@ -198,14 +198,14 @@ bot.on('message', async msg => {
   await bot.sendMessage(msg.chat.id, 'Коллекции сохранены.', { reply_markup: mainKeyboard() });
 });
 
-bot.onText(/\\/stats/, async msg => {
+bot.onText(/\/stats/, async msg => {
   if (!adminId || msg.from.id !== adminId) return;
   const total = db.prepare('SELECT COUNT(*) AS n FROM users').get().n;
   const premium = db.prepare("SELECT COUNT(*) AS n FROM users WHERE premium = 'yes'").get().n;
   const nft = db.prepare("SELECT COUNT(*) AS n FROM users WHERE has_nft = 'yes'").get().n;
   const refs = db.prepare('SELECT COUNT(*) AS n FROM users WHERE referred_by IS NOT NULL').get().n;
   await bot.sendMessage(msg.chat.id,
-    '📊 Статистика\\nПользователей: ' + total + '\\nPremium: ' + premium + '\\nNFT: ' + nft + '\\nПришли по реферальной ссылке: ' + refs);
+    '📊 Статистика\nПользователей: ' + total + '\nPremium: ' + premium + '\nNFT: ' + nft + '\nПришли по реферальной ссылке: ' + refs);
 });
 
 bot.on('polling_error', err => console.error('Telegram polling error:', err.message));
