@@ -126,17 +126,17 @@ bot.on('error', error => {
 async function showHome(chatId, name) {
   return bot.sendMessage(
     chatId,
-    'Привет, ' + (name || 'друг') + '!\\n\\n' +
+    'Привет, ' + (name || 'друг') + '!\n\n' +
       'Это добровольный каталог участников, которые сами указали наличие Telegram Premium или NFT-подарков. ' +
-      'Бот не сканирует Telegram и не проверяет скрытые данные.\\n\\nВыбери действие:',
+      'Бот не сканирует Telegram и не проверяет скрытые данные.\n\nВыбери действие:',
     { reply_markup: mainKeyboard() }
   );
 }
 
-bot.onText(/\\/start(?:@\\w+)?(?:\\s+(.+))?/, async (msg, match) => {
+bot.onText(/\/start(?:@\w+)?(?:\s+(.+))?/, async (msg, match) => {
   try {
     const rawRef = match && match[1] ? match[1].trim() : '';
-    const refMatch = rawRef.match(/^ref_(\\d+)$/);
+    const refMatch = rawRef.match(/^ref_(\d+)$/);
     const referrerId = refMatch ? refMatch[1] : null;
     upsertUser(msg.from, referrerId);
     await showHome(msg.chat.id, msg.from.first_name);
@@ -146,7 +146,7 @@ bot.onText(/\\/start(?:@\\w+)?(?:\\s+(.+))?/, async (msg, match) => {
   }
 });
 
-bot.onText(/\\/help(?:@\\w+)?/, async msg => {
+bot.onText(/\/help(?:@\w+)?/, async msg => {
   try {
     await showHome(msg.chat.id, msg.from.first_name);
   } catch (error) {
@@ -154,7 +154,7 @@ bot.onText(/\\/help(?:@\\w+)?/, async msg => {
   }
 });
 
-bot.onText(/\\/stats(?:@\\w+)?/, async msg => {
+bot.onText(/\/stats(?:@\w+)?/, async msg => {
   if (!adminId || String(msg.from.id) !== adminId) return;
   try {
     const users = Object.values(data.users);
@@ -162,8 +162,8 @@ bot.onText(/\\/stats(?:@\\w+)?/, async msg => {
     const nft = users.filter(user => user.has_nft === 'yes').length;
     const referrals = users.filter(user => user.referred_by).length;
     await bot.sendMessage(msg.chat.id,
-      '📊 Статистика\\nПользователей: ' + users.length +
-      '\\nPremium: ' + premium + '\\nNFT: ' + nft + '\\nПришли по реферальной ссылке: ' + referrals);
+      '📊 Статистика\nПользователей: ' + users.length +
+      '\nPremium: ' + premium + '\nNFT: ' + nft + '\nПришли по реферальной ссылке: ' + referrals);
   } catch (error) {
     console.error('[STATS HANDLER]', error);
   }
@@ -215,10 +215,10 @@ bot.on('callback_query', async query => {
     if (action === 'my_profile') {
       const user = getUser(userId);
       return bot.sendMessage(chatId,
-        '👤 Твой профиль\\nUsername: ' + (user.username ? '@' + user.username : 'не указан') +
-        '\\nPremium: ' + status(user.premium) +
-        '\\nNFT-подарки: ' + status(user.has_nft) +
-        '\\nКоллекции: ' + (user.collections || 'не указаны'),
+        '👤 Твой профиль\nUsername: ' + (user.username ? '@' + user.username : 'не указан') +
+        '\nPremium: ' + status(user.premium) +
+        '\nNFT-подарки: ' + status(user.has_nft) +
+        '\nКоллекции: ' + (user.collections || 'не указаны'),
         { reply_markup: mainKeyboard() });
     }
 
@@ -227,8 +227,8 @@ bot.on('callback_query', async query => {
       const link = 'https://t.me/' + me.username + '?start=ref_' + userId;
       const count = Object.values(data.users).filter(user => user.referred_by === userId).length;
       return bot.sendMessage(chatId,
-        '🔗 Твоя ссылка:\\n' + link + '\\n\\nПриглашено: ' + count +
-        '\\n\\nПриглашение засчитывается, когда новый пользователь впервые запускает бота по этой ссылке.',
+        '🔗 Твоя ссылка:\n' + link + '\n\nПриглашено: ' + count +
+        '\n\nПриглашение засчитывается, когда новый пользователь впервые запускает бота по этой ссылке.',
         { reply_markup: mainKeyboard() });
     }
 
@@ -240,15 +240,15 @@ bot.on('callback_query', async query => {
         .slice(0, 20);
       const title = field === 'premium' ? '⭐ Участники с Premium' : '🎁 Владельцы NFT-подарков';
       if (!rows.length) {
-        return bot.sendMessage(chatId, title + '\\nПока никто не указал эту информацию.', { reply_markup: mainKeyboard() });
+        return bot.sendMessage(chatId, title + '\nПока никто не указал эту информацию.', { reply_markup: mainKeyboard() });
       }
       const lines = rows.map((user, index) => {
         const collection = field === 'has_nft' && user.collections ? ' — ' + user.collections : '';
         return (index + 1) + '. ' + userLabel(user) + collection;
       });
       return bot.sendMessage(chatId,
-        title + '\\n\\n' + lines.join('\\n') +
-        '\\n\\nПоказаны только участники, которые добровольно зарегистрировались.',
+        title + '\n\n' + lines.join('\n') +
+        '\n\nПоказаны только участники, которые добровольно зарегистрировались.',
         { reply_markup: mainKeyboard() });
     }
 
