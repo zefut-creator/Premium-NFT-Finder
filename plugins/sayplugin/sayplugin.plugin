@@ -3,7 +3,8 @@ import json
 import re
 from typing import Any, Dict, List
 
-from base_plugin import BasePlugin, HookResult, HookStrategy, MenuItemData, MenuItemType
+from base_plugin import BasePlugin, HookResult, HookStrategy, MenuItemData, MenuItemType, MethodHook
+from hook_utils import find_class
 from ui.settings import Header, Switch, Selector, EditText, Text, Divider
 from ui.alert import AlertDialogBuilder
 from ui.bulletin import BulletinHelper
@@ -59,6 +60,42 @@ def clean_text(value: str) -> str:
     return value.strip()
 
 
+
+PALETTES = [
+    {"key_actionBarDefault":"FF17324D","key_actionBarDefaultTitle":"FFFFFFFF","key_actionBarDefaultSubtitle":"FFD7E6F2","key_windowBackgroundWhite":"FFF4F8FC","key_windowBackgroundGray":"FFEAF0F6","key_windowBackgroundWhiteBlackText":"FF182B3A","key_chat_messagePanelBackground":"FFFFFFFF","key_chat_inBubble":"FFFFFFFF","key_chat_outBubble":"FFCFE8FF","key_chat_inBubbleText":"FF1A2733","key_chat_outBubbleText":"FF12324A","key_dialogBackground":"FFFFFFFF"},
+    {"key_actionBarDefault":"FF145B50","key_actionBarDefaultTitle":"FFFFFFFF","key_actionBarDefaultSubtitle":"FFD6F3E9","key_windowBackgroundWhite":"FFF3FAF7","key_windowBackgroundGray":"FFE6F3ED","key_windowBackgroundWhiteBlackText":"FF17382F","key_chat_messagePanelBackground":"FFFFFFFF","key_chat_inBubble":"FFFFFFFF","key_chat_outBubble":"FFCDEFE1","key_chat_inBubbleText":"FF17382F","key_chat_outBubbleText":"FF17382F","key_dialogBackground":"FFFFFFFF"},
+    {"key_actionBarDefault":"FF773B56","key_actionBarDefaultTitle":"FFFFFFFF","key_actionBarDefaultSubtitle":"FFF9E7EE","key_windowBackgroundWhite":"FFFFF7FA","key_windowBackgroundGray":"FFF8EAF0","key_windowBackgroundWhiteBlackText":"FF432532","key_chat_messagePanelBackground":"FFFFFFFF","key_chat_inBubble":"FFFFFFFF","key_chat_outBubble":"FFF8D9E5","key_chat_inBubbleText":"FF432532","key_chat_outBubbleText":"FF432532","key_dialogBackground":"FFFFFFFF"},
+    {"key_actionBarDefault":"FF4D3A78","key_actionBarDefaultTitle":"FFFFFFFF","key_actionBarDefaultSubtitle":"FFE9E0FA","key_windowBackgroundWhite":"FFF8F6FC","key_windowBackgroundGray":"FFEEEAF6","key_windowBackgroundWhiteBlackText":"FF2E2544","key_chat_messagePanelBackground":"FFFFFFFF","key_chat_inBubble":"FFFFFFFF","key_chat_outBubble":"FFE4D9FA","key_chat_inBubbleText":"FF302546","key_chat_outBubbleText":"FF302546","key_dialogBackground":"FFFFFFFF"},
+    {"key_actionBarDefault":"FF252A32","key_actionBarDefaultTitle":"FFFFFFFF","key_actionBarDefaultSubtitle":"FFE0E4EA","key_windowBackgroundWhite":"FFF5F6F8","key_windowBackgroundGray":"FFE9EBEF","key_windowBackgroundWhiteBlackText":"FF202632","key_chat_messagePanelBackground":"FFFFFFFF","key_chat_inBubble":"FFFFFFFF","key_chat_outBubble":"FFDCE5F2","key_chat_inBubbleText":"FF202632","key_chat_outBubbleText":"FF202632","key_dialogBackground":"FFFFFFFF"},
+]
+
+
+class ThemeColorHook(MethodHook):
+    def __init__(self, plugin):
+        self.plugin = plugin
+
+    def after_hooked_method(self, param):
+        try:
+            if not self.plugin.get_setting("telegram_theme_enabled", False):
+                return
+            args = param.args
+            if args is None or len(args) < 1:
+                return
+            key_name = self.plugin.theme_key_ids.get(int(args[0]))
+            if not key_name:
+                return
+            index = int(self.plugin.get_setting("telegram_palette", 0) or 0)
+            palette = PALETTES[max(0, min(index, len(PALETTES) - 1))]
+            value = palette.get(key_name)
+            if value:
+                color = int(value, 16)
+                if color >= 0x80000000:
+                    color -= 0x100000000
+                param.setResult(color)
+        except Exception:
+            return
+
+
 class SayPlugin(BasePlugin):
     def on_plugin_load(self):
         self.add_on_send_message_hook()
@@ -77,7 +114,29 @@ class SayPlugin(BasePlugin):
             text="Сохранить в SayPlugin", on_click=self.save_selected_message,
             icon="msg_saved", subtext="В личный архив", priority=10,
         ))
+        self.install_theme_hooks()
         self.logger.info("SayPlugin 0.2.0 loaded")
+
+    def install_theme_hooks(self):
+        try:
+            theme_class = find_class("org.telegram.ui.ActionBar.Theme")
+            self.theme_key_ids = {}
+            if not theme_class:
+                self.logger.warning("Theme class unavailable; color customization disabled.")
+                return
+            for name in PALETTES[0].keys():
+                try:
+                    field = theme_class.getField(name)
+                    self.theme_key_ids[int(field.get(None))] = name
+                except Exception:
+                    continue
+            hooks = self.hook_all_methods(theme_class, "getColor", ThemeColorHook(self))
+            self.logger.info("Theme color hook registered; recognized keys: %s", len(self.theme_key_ids))
+            if not hooks:
+                self.logger.warning("Theme.getColor hooks were not registered.")
+        except Exception:
+            self.theme_key_ids = {}
+            self.logger.exception("Could not initialize optional Telegram color customization.")
 
     # ---------- Settings ----------
     def create_settings(self) -> List[Any]:
@@ -85,7 +144,12 @@ class SayPlugin(BasePlugin):
             Header(text="SayPlugin · Центр управления"),
             Text(text="Открой SayPlugin из главного меню. Разделы и настройки ниже сохраняются локально в настройках плагина.",
                  icon="msg_info"),
-            Header(text="01 · Интерфейс SayPlugin"),
+            Header(text="01 · Внешний вид Telegram"),
+            Switch(key="telegram_theme_enabled", text="Экспериментальная цветовая тема Telegram", default=False,
+                   subtext="Переопределяет поддерживаемые цвета клиента. Выключено по умолчанию; зависит от версии AyuGram.", icon="msg_theme"),
+            Selector(key="telegram_palette", text="Цветовая палитра", default=0,
+                     items=["Океан", "Мята", "Роза", "Фиолетовый", "Графит"], icon="msg_color"),
+            Header(text="Оформление панели SayPlugin"),
             Selector(key="dashboard_density", text="Плотность меню", default=1,
                      items=["Компактная", "Обычная", "Подробная"], icon="msg_list"),
             Switch(key="dashboard_emoji", text="Иконки в меню", default=True,
