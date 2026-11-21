@@ -1,6 +1,9 @@
 from datetime import datetime
 import json
 import re
+import threading
+import urllib.parse
+import urllib.request
 from typing import Any, Dict, List
 
 from base_plugin import BasePlugin, HookResult, HookStrategy, MenuItemData, MenuItemType, MethodHook
@@ -246,6 +249,11 @@ class SayPlugin(BasePlugin):
             Text(text=".sayreverse", subtext="Перевернуть текст."),
             Text(text=".sayquote / .saybullets", subtext="Оформить цитату или маркированный список."),
             Text(text=".saylen", subtext="Посчитать символы, слова и строки."),
+            Divider(),
+            Header(text="Валюты и конвертер"),
+            Text(text=".валюты", subtext="Список валют и курсов."),
+            Text(text=".валюта 2000 KZT RUB", subtext="Конвертация по текущему справочному курсу."),
+            Text(text=".валюта тенге 2000 = рубли", subtext="Можно указывать названия валют по-русски."),
         ]
 
     def _diagnostics_settings(self) -> List[Any]:
@@ -283,6 +291,12 @@ class SayPlugin(BasePlugin):
 
         if lowered == ".sayarchive":
             run_on_ui_thread(self.show_archive)
+            return HookResult(strategy=HookStrategy.CANCEL)
+        if lowered == ".валюты":
+            self.show_currency_list_async()
+            return HookResult(strategy=HookStrategy.CANCEL)
+        if lowered.startswith(".валюта "):
+            self.convert_currency_async(raw.strip()[8:].strip())
             return HookResult(strategy=HookStrategy.CANCEL)
         if lowered.startswith(".sayfind "):
             query = raw.strip()[9:].strip()
@@ -327,6 +341,98 @@ class SayPlugin(BasePlugin):
             params.message = updated
             return HookResult(strategy=HookStrategy.MODIFY, params=params)
         return HookResult()
+
+    def _currency_json(self, url: str):
+        request = urllib.request.Request(url, headers={"User-Agent": "SayPlugin/0.4"})
+        with urllib.request.urlopen(request, timeout=7) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    def show_currency_list_async(self):
+        def worker():
+            try:
+                data = self._currency_json("https://open.er-api.com/v6/latest/USD")
+                if data.get("result") != "success":
+                    raise ValueError("Источник курсов временно недоступен.")
+                rates = data.get("rates", {})
+                labels = [("KZT", "Тенге"), ("RUB", "Рубли"), ("USD", "Доллары"),
+                          ("UAH", "Гривны"), ("EUR", "Евро"), ("GBP", "Фунты"),
+                          ("CNY", "Юани"), ("TRY", "Лиры")]
+                lines = ["Справочные курсы относительно USD:"]
+                for code, name in labels:
+                    if code == "USD":
+                        lines.append(name + " (USD): 1")
+                    elif code in rates:
+                        lines.append(f"{name} ({code}): {float(rates[code]):.5g}")
+                lines += ["", "Криптовалюты: BTC — Bitcoin; GRAM — Gram (бывший TON).",
+                          "Обновление фиатных курсов: " + str(data.get("time_last_update_utc", "неизвестно"))]
+                body = "\n".join(lines)
+            except Exception as error:
+                body = "Не удалось загрузить курсы. Проверь подключение и попробуй позже.\n" + str(error)[:160]
+            run_on_ui_thread(lambda: self._show_text_dialog("SayPlugin · Валюты", body))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def convert_currency_async(self, expression: str):
+        aliases = {
+            "тенге":"KZT", "тг":"KZT", "kzt":"KZT",
+            "рубли":"RUB", "рубль":"RUB", "руб":"RUB", "rub":"RUB",
+            "доллары":"USD", "доллар":"USD", "баксы":"USD", "usd":"USD",
+            "гривны":"UAH", "гривна":"UAH", "uah":"UAH",
+            "евро":"EUR", "eur":"EUR", "фунты":"GBP", "gbp":"GBP",
+            "юани":"CNY", "cny":"CNY", "лиры":"TRY", "try":"TRY",
+            "биткоин":"BTC", "биткойн":"BTC", "btc":"BTC",
+            "грам":"GRAM", "gram":"GRAM", "ton":"GRAM", "toncoin":"GRAM",
+        }
+        parts = expression.lower().replace("=", " ").split()
+        try:
+            if len(parts) != 3:
+                raise ValueError("Формат: .валюта 2000 KZT RUB или .валюта тенге 2000 = рубли")
+            if re.fullmatch(r"[0-9]+(?:[.,][0-9]+)?", parts[0]):
+                amount = float(parts[0].replace(",", "."))
+                source, target = parts[1].upper(), parts[2].upper()
+            elif re.fullmatch(r"[0-9]+(?:[.,][0-9]+)?", parts[1]):
+                source, target = aliases.get(parts[0]), aliases.get(parts[2])
+                amount = float(parts[1].replace(",", "."))
+            else:
+                raise ValueError("Не понял сумму. Пример: .валюта 2000 KZT RUB")
+            source, target = aliases.get(source, source), aliases.get(target, target)
+            if amount <= 0 or not source or not target:
+                raise ValueError("Проверь сумму и обозначения валют.")
+        except Exception as error:
+            self._show_text_dialog("Конвертер валют", str(error))
+            return
+
+        def worker():
+            try:
+                fiat = self._currency_json("https://open.er-api.com/v6/latest/USD")
+                if fiat.get("result") != "success":
+                    raise ValueError("Нет ответа от источника фиатных курсов.")
+                rates = fiat.get("rates", {})
+                crypto_ids = {"BTC":"bitcoin", "GRAM":"the-open-network"}
+                crypto = {}
+                if source in crypto_ids or target in crypto_ids:
+                    ids = ",".join(sorted(set(crypto_ids.values())))
+                    url = "https://api.coingecko.com/api/v3/simple/price?" + urllib.parse.urlencode(
+                        {"ids": ids, "vs_currencies": "usd"})
+                    crypto = self._currency_json(url)
+                def usd_price(code):
+                    if code in crypto_ids:
+                        price = crypto.get(crypto_ids[code], {}).get("usd")
+                        if price is None:
+                            raise ValueError("Нет актуального курса " + code + ".")
+                        return float(price)
+                    if code == "USD":
+                        return 1.0
+                    if code not in rates:
+                        raise ValueError("Валюта " + code + " не поддерживается.")
+                    return 1.0 / float(rates[code])
+                converted = amount * usd_price(source) / usd_price(target)
+                body = (f"{amount:g} {source} ≈ {converted:,.8g} {target}\n\n"
+                        "Ориентировочный расчёт по рыночному курсу, не гарантирует сумму обмена. "
+                        "Фиат: open.er-api.com; криптовалюта: CoinGecko.")
+            except Exception as error:
+                body = "Не удалось выполнить конвертацию: " + str(error)[:200]
+            run_on_ui_thread(lambda: self._show_text_dialog("Конвертер валют", body))
+        threading.Thread(target=worker, daemon=True).start()
 
     def run_text_command(self, raw: str):
         text = raw.strip()
