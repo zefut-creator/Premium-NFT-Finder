@@ -340,6 +340,9 @@ class SayPlugin(BasePlugin):
             return
         if not getattr(self, "theme_hooks", None):
             self.install_theme_hooks()
+        if not getattr(self, "theme_hooks", None) or not self.theme_key_ids:
+            BulletinHelper.show_error("Эта сборка AyuGram не подтвердила поддержку цветовых хуков.")
+            return
         try:
             notification_class = find_class("org.telegram.messenger.NotificationCenter")
             if not notification_class:
@@ -355,6 +358,10 @@ class SayPlugin(BasePlugin):
         if enabled:
             if not getattr(self, "theme_hooks", None):
                 self.install_theme_hooks()
+            if not getattr(self, "theme_hooks", None) or not self.theme_key_ids:
+                self.set_setting("telegram_theme_enabled", False)
+                BulletinHelper.show_error("Цветовая тема не поддерживается этой сборкой; переключатель выключен.")
+                return
             self.apply_theme_palette()
         else:
             for hook in getattr(self, "theme_hooks", []) or []:
@@ -866,6 +873,6 @@ class SayPlugin(BasePlugin):
             "SayPlugin — модульный набор инструментов для AyuGram Android. Данные архива и настроек остаются в локальном хранилище плагина. Плагин не читает списки участников и не собирает чужие личные данные.")
 
     def help_text(self):
-        return ("SayPlugin 0.4.1\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
+        return ("SayPlugin 0.5.0\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
                 ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen.\n.sayfind слово — поиск в архиве; .sayarchive — открыть архив. Эти две команды выполняются локально.\n"
                 "Открой SayPlugin в меню Telegram для доступа к разделам.")
