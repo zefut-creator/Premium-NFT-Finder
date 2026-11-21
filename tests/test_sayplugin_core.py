@@ -9,7 +9,7 @@ SOURCE = pathlib.Path("plugins/sayplugin/sayplugin.plugin")
 def load_pure_functions():
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     wanted = {"parse_shortcuts", "safe_json_list", "clean_text"}
-    nodes = [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in wanted]
+    nodes = [node for node in tree.body if (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in wanted) or (isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "SHORTCUT_RE" for target in node.targets))]
     namespace = {"Any": object, "Dict": dict, "List": list, "json": json, "re": __import__("re")}
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(SOURCE), "exec"), namespace)
     return namespace
@@ -27,6 +27,11 @@ class CoreTests(unittest.TestCase):
     def test_shortcut_value_is_limited(self):
         parsed = self.core["parse_shortcuts"](";x=" + ("a" * 2500))
         self.assertEqual(len(parsed[";x"]), 2000)
+
+    def test_shortcut_matches_punctuation_boundaries(self):
+        regex = self.core["SHORTCUT_RE"]
+        self.assertEqual(regex.sub(lambda match: "Hello", ";пр!"), "Hello!")
+        self.assertEqual(regex.sub(lambda match: "Hello", "x;прx"), "x;прx")
 
     def test_json_archive_recovers_from_corruption(self):
         self.assertEqual(self.core["safe_json_list"]("broken"), [])
