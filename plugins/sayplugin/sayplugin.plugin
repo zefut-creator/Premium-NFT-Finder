@@ -285,6 +285,10 @@ class SayPlugin(BasePlugin):
                 target.order = insert_at
                 target.locked = False
                 filters.add(insert_at, target)
+                try:
+                    controller.dialogFiltersById.put(int(filter_id), target)
+                except Exception:
+                    pass
                 # DialogsAdapter reads DialogFilter.dialogs, not the controller's
                 # allDialogs list. Populate the native filtered lists explicitly.
                 controller.updateFilterDialogs(target)
@@ -311,8 +315,13 @@ class SayPlugin(BasePlugin):
             ids = {item[0] for item in self.NATIVE_CHAT_FILTERS}
             if not enabled:
                 for index in range(int(filters.size()) - 1, -1, -1):
-                    if int(filters.get(index).id) in ids:
+                    filter_id = int(filters.get(index).id)
+                    if filter_id in ids:
                         filters.remove(index)
+                        try:
+                            controller.dialogFiltersById.remove(filter_id)
+                        except Exception:
+                            pass
             else:
                 self.ensure_native_chat_tabs(fragment)
             notification_class = find_class("org.telegram.messenger.NotificationCenter")
