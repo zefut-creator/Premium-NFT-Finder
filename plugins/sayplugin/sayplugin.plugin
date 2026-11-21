@@ -312,6 +312,28 @@ class SayPlugin(BasePlugin):
         except Exception:
             return
 
+    def on_native_chat_tabs_toggle(self, enabled):
+        try:
+            fragment = get_last_fragment()
+            if fragment is None:
+                return
+            controller = fragment.getMessagesController()
+            filters = get_private_field(controller, "dialogFilters")
+            if filters is None:
+                return
+            ids = {item[0] for item in self.NATIVE_CHAT_FILTERS}
+            if not enabled:
+                for index in range(int(filters.size()) - 1, -1, -1):
+                    if int(filters.get(index).id) in ids:
+                        filters.remove(index)
+            else:
+                self.ensure_native_chat_tabs(fragment)
+            notification_class = find_class("org.telegram.messenger.NotificationCenter")
+            event = int(notification_class.getField("dialogFiltersUpdated").get(None))
+            notification_class.getInstance(fragment.getCurrentAccount()).postNotificationName(event)
+        except Exception:
+            self.logger.exception("Could not toggle native chat tabs.")
+
     def apply_theme_palette(self):
         if not self.get_setting("telegram_theme_enabled", False):
             BulletinHelper.show_info("Сначала включи экспериментальную цветовую тему.")
@@ -361,7 +383,7 @@ class SayPlugin(BasePlugin):
             Header(text="Внешний вид Telegram"),
             Switch(key="native_chat_tabs_enabled", text="Вкладки списка чатов",
                    default=True, subtext="Личка, чаты, каналы и боты — встроенные фильтры AyuGram с суммой непрочитанных сообщений.",
-                   icon="msg_folders"),
+                   icon="msg_folders", on_change=self.on_native_chat_tabs_toggle),
             Switch(key="telegram_theme_enabled", text="Экспериментальная цветовая тема", default=False,
                    subtext="Только распознанные цвета. Может не поддерживаться отдельными сборками AyuGram.",
                    icon="msg_theme", on_change=self.on_theme_toggle),
