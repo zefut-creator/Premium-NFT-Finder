@@ -20,9 +20,9 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "03bbae09d75a25c512402c74b3ebc717ba400eebe5d62067cdc2d57cf60ff13d",
-      "size": 51357,
-      "updated_at": "2026-11-21T14:10:00Z"
+      "sha256": "bd2b0616dcce5501a5a277fd40d3b208266165fdf4b9f871b9a82e1f32810669",
+      "size": 51943,
+      "updated_at": "2026-11-21T14:20:00Z"
     }
   ]
 }
