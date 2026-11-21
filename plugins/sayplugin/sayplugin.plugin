@@ -26,7 +26,7 @@ DEFAULT_SHORTCUTS = """;пр=Привет, как дела?
 ;дата={date}
 ;время={time}"""
 MAX_ARCHIVE_ITEMS = 100
-SHORTCUT_PATTERN = re.compile(r"(?<!\\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\\S)")
+SHORTCUT_PATTERN = re.compile(r"(?<!\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\S)")
 
 
 def parse_shortcuts(raw: str) -> Dict[str, str]:
@@ -94,8 +94,8 @@ class SayPlugin(BasePlugin):
 
         if lowered == ".sayhelp":
             params.message = (
-                "SayPlugin 0.1.0\\nСокращения: ;пр, ;спс, ;пж, ;сори, ;дата, ;время.\\n"
-                "Команды: .saydate, .saytime, .sayupper текст, .saylower текст, .saylen текст.\\n"
+                "SayPlugin 0.1.0\nСокращения: ;пр, ;спс, ;пж, ;сори, ;дата, ;время.\n"
+                "Команды: .saydate, .saytime, .sayupper текст, .saylower текст, .saylen текст.\n"
                 "Сохраняй сообщения через контекстное меню → «Сохранить в SayPlugin»."
             )
             return HookResult(strategy=HookStrategy.MODIFY, params=params)
@@ -216,22 +216,22 @@ class SayPlugin(BasePlugin):
 
     def show_shortcuts(self):
         shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
-        content = "\\n".join(f"{key} → {value}" for key, value in shortcuts.items())
+        content = "\n".join(f"{key} → {value}" for key, value in shortcuts.items())
         self._show_text_dialog("SayPlugin — сокращения", content or "Сокращений пока нет. Добавь их в настройках.")
 
     def show_commands(self):
         self._show_text_dialog("SayPlugin — быстрые команды",
-            ".sayhelp — справка\\n.saydate — текущая дата\\n.saytime — текущее время\\n"
-            ".sayupper текст — ВЕРХНИЙ РЕГИСТР\\n.saylower текст — нижний регистр\\n"
+            ".sayhelp — справка\n.saydate — текущая дата\n.saytime — текущее время\n"
+            ".sayupper текст — ВЕРХНИЙ РЕГИСТР\n.saylower текст — нижний регистр\n"
             ".saylen текст — количество символов и слов")
 
     def show_module_status(self):
         archive_count = len(safe_json_list(self.get_setting("archive_json", "[]")))
         shortcut_count = len(parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS)))
-        status = ("Активно в версии 0.1.0:\\n"
-                  f"• Автосокращения: {shortcut_count}\\n"
-                  "• Команды обработки текста: 6\\n"
-                  f"• Личный архив: {archive_count}/{MAX_ARCHIVE_ITEMS}\\n"
-                  "• Главное меню: включено\\n\\n"
+        status = ("Активно в версии 0.1.0:\n"
+                  f"• Автосокращения: {shortcut_count}\n"
+                  "• Команды обработки текста: 6\n"
+                  f"• Личный архив: {archive_count}/{MAX_ARCHIVE_ITEMS}\n"
+                  "• Главное меню: включено\n\n"
                   "Остальные модули будут добавляться отдельными обновлениями.")
         self._show_text_dialog("SayPlugin — статус", status)
