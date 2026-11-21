@@ -28,7 +28,7 @@ DEFAULT_SHORTCUTS = """;пр=Привет, как дела?
 ;время={time}"""
 MAX_ARCHIVE_ITEMS = 300
 MAX_TEXT = 12000
-SHORTCUT_RE = re.compile(r"(?<!\\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\\S)")
+SHORTCUT_RE = re.compile(r"(?<!\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\S)")
 
 
 def parse_shortcuts(raw: str) -> Dict[str, str]:
@@ -53,9 +53,9 @@ def safe_json_list(raw: Any) -> List[dict]:
 
 
 def clean_text(value: str) -> str:
-    value = re.sub(r"[ \\t]+", " ", value or "")
-    value = re.sub(r" *\\n *", "\\n", value)
-    value = re.sub(r"\\n{3,}", "\\n\\n", value)
+    value = re.sub(r"[ \t]+", " ", value or "")
+    value = re.sub(r" *\n *", "\n", value)
+    value = re.sub(r"\n{3,}", "\n\n", value)
     return value.strip()
 
 
@@ -112,7 +112,7 @@ class SayPlugin(BasePlugin):
             Header(text="04 · Автоматизация"),
             Switch(key="macros_enabled", text="Текстовые команды", default=True,
                    subtext="Команды обработки текста выполняются только при отправке соответствующей команды.", icon="msg_command"),
-            EditText(key="templates", hint="Шаблоны: ;ключ=текст", default=";встреча=Здравствуйте! Предлагаю обсудить детали.\\n;занят=Сейчас занят, отвечу позже.", multiline=True, max_length=MAX_TEXT),
+            EditText(key="templates", hint="Шаблоны: ;ключ=текст", default=";встреча=Здравствуйте! Предлагаю обсудить детали.\n;занят=Сейчас занят, отвечу позже.", multiline=True, max_length=MAX_TEXT),
             Header(text="05 · Диагностика"),
             Text(text="Проверить состояние модулей", icon="msg_info",
                  on_click=lambda view: self.show_module_status()),
@@ -160,7 +160,7 @@ class SayPlugin(BasePlugin):
         if self.get_setting("signature_enabled", False):
             signature = str(self.get_setting("signature", "") or "").strip()
             if signature and not updated.startswith(".say") and not updated.endswith(signature):
-                updated = updated.rstrip() + "\\n" + signature
+                updated = updated.rstrip() + "\n" + signature
 
         if updated != raw:
             params.message = updated
@@ -186,8 +186,8 @@ class SayPlugin(BasePlugin):
             matches = [row for row in rows if query in str(row.get("text", "")).lower()]
             if not matches:
                 return "В личном архиве ничего не найдено."
-            return "Найдено в личном архиве:\\n" + "\\n\\n".join(
-                "• " + str(row.get("date", "Без даты")) + "\\n" + str(row.get("text", ""))[:350]
+            return "Найдено в личном архиве:\n" + "\n\n".join(
+                "• " + str(row.get("date", "Без даты")) + "\n" + str(row.get("text", ""))[:350]
                 for row in matches[:8]
             )
         if lowered.startswith(".sayupper "):
@@ -201,10 +201,10 @@ class SayPlugin(BasePlugin):
         if lowered.startswith(".sayreverse "):
             return text[12:][::-1]
         if lowered.startswith(".sayquote "):
-            return "\\n".join("> " + line for line in text[10:].splitlines())
+            return "\n".join("> " + line for line in text[10:].splitlines())
         if lowered.startswith(".saybullets "):
             lines = [line.strip() for line in text[12:].splitlines() if line.strip()]
-            return "\\n".join("• " + line.lstrip("•-— ").strip() for line in lines)
+            return "\n".join("• " + line.lstrip("•-— ").strip() for line in lines)
         if lowered.startswith(".saylen "):
             body = text[8:]
             return f"Символов: {len(body)} · Слов: {len(body.split())} · Строк: {len(body.splitlines())}"
@@ -339,31 +339,31 @@ class SayPlugin(BasePlugin):
     def show_text_tools(self):
         self._show_text_dialog("Текст и шаблоны",
             "Автосокращения: ;пр, ;спс, ;пж, ;дата, ;время и собственные ключи.\n\n"
-            "Команды:\\n.sayupper текст — ВЕРХНИЙ РЕГИСТР\\n.saylower текст — нижний регистр\\n"
-            ".saytitle текст — Заглавные Буквы\\n.sayclean текст — очистить пробелы\\n"
-            ".sayquote текст — оформить цитатой\\n.saybullets строки — список\\n"
-            ".saylen текст — статистика текста\\n.sayfind слово — поиск по личному архиву")
+            "Команды:\n.sayupper текст — ВЕРХНИЙ РЕГИСТР\n.saylower текст — нижний регистр\n"
+            ".saytitle текст — Заглавные Буквы\n.sayclean текст — очистить пробелы\n"
+            ".sayquote текст — оформить цитатой\n.saybullets строки — список\n"
+            ".saylen текст — статистика текста\n.sayfind слово — поиск по личному архиву")
 
     def show_automation(self):
         self._show_text_dialog("Автоматизация",
-            "Доступно сейчас:\\n• Сокращения и шаблоны при отправке\\n• Переменные {date} и {time}\\n"
-            "• Подпись в конце сообщения (по умолчанию выключена)\\n• Очистка пробелов и заглавная буква — по настройке.\\n\\n"
+            "Доступно сейчас:\n• Сокращения и шаблоны при отправке\n• Переменные {date} и {time}\n"
+            "• Подпись в конце сообщения (по умолчанию выключена)\n• Очистка пробелов и заглавная буква — по настройке.\n\n"
             "Все изменения происходят только в твоём исходящем тексте. Автоматической рассылки нет.")
 
     def show_appearance(self):
         density = ["Компактная", "Обычная", "Подробная"]
         index = int(self.get_setting("dashboard_density", 1) or 1)
         self._show_text_dialog("Внешний вид SayPlugin",
-            f"Стиль панели: {density[max(0, min(index, 2))]}\\n"
-            f"Иконки: {'включены' if self.get_setting('dashboard_emoji', True) else 'выключены'}\\n"
-            f"Описание: {'включено' if self.get_setting('dashboard_intro', True) else 'выключено'}\\n\\n"
+            f"Стиль панели: {density[max(0, min(index, 2))]}\n"
+            f"Иконки: {'включены' if self.get_setting('dashboard_emoji', True) else 'выключены'}\n"
+            f"Описание: {'включено' if self.get_setting('dashboard_intro', True) else 'выключено'}\n\n"
             "Эти параметры меняют панель SayPlugin. Системные цвета, шрифты, фон и расположение элементов самого AyuGram пока не изменяются: для них нужен отдельный подтверждённый API интерфейса.")
 
     def show_utilities(self):
         self._show_text_dialog("Инструменты",
-            "• .saydate — текущая дата\\n• .saytime — текущее время\\n• .saylen текст — символы, слова и строки\\n"
-            "• .sayclean текст — убрать лишние пробелы\\n• .sayreverse текст — перевернуть текст\\n"
-            "• .sayquote текст — оформить цитатой\\n• .saybullets строки — сделать список")
+            "• .saydate — текущая дата\n• .saytime — текущее время\n• .saylen текст — символы, слова и строки\n"
+            "• .sayclean текст — убрать лишние пробелы\n• .sayreverse текст — перевернуть текст\n"
+            "• .sayquote текст — оформить цитатой\n• .saybullets строки — сделать список")
 
     def show_lab(self):
         self._show_text_dialog("Лаборатория",
@@ -374,13 +374,13 @@ class SayPlugin(BasePlugin):
         shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
         templates = parse_shortcuts(self.get_setting("templates", ""))
         status = (
-            "SayPlugin 0.2.0\\n\\n"
-            f"Текстовый движок: {'вкл' if self.get_setting('macros_enabled', True) else 'выкл'}\\n"
-            f"Автосокращения: {'вкл' if self.get_setting('shortcuts_enabled', True) else 'выкл'} ({len(shortcuts) + len(templates)} ключей)\\n"
-            f"Личный архив: {'вкл' if self.get_setting('archive_enabled', True) else 'выкл'} ({archive_count} записей)\\n"
-            f"Очистка пробелов: {'вкл' if self.get_setting('clean_spaces', False) else 'выкл'}\\n"
-            f"Автозаглавная: {'вкл' if self.get_setting('capitalize_first', False) else 'выкл'}\\n"
-            f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\\n\\n"
+            "SayPlugin 0.2.0\n\n"
+            f"Текстовый движок: {'вкл' if self.get_setting('macros_enabled', True) else 'выкл'}\n"
+            f"Автосокращения: {'вкл' if self.get_setting('shortcuts_enabled', True) else 'выкл'} ({len(shortcuts) + len(templates)} ключей)\n"
+            f"Личный архив: {'вкл' if self.get_setting('archive_enabled', True) else 'выкл'} ({archive_count} записей)\n"
+            f"Очистка пробелов: {'вкл' if self.get_setting('clean_spaces', False) else 'выкл'}\n"
+            f"Автозаглавная: {'вкл' if self.get_setting('capitalize_first', False) else 'выкл'}\n"
+            f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\n\n"
             "Панель и текстовые функции используют публичные API SDK. Глубокая смена темы AyuGram ещё не реализована и требует проверки API."
         )
         self._show_text_dialog("SayPlugin · Диагностика", status)
@@ -390,6 +390,6 @@ class SayPlugin(BasePlugin):
             "SayPlugin — модульный набор инструментов для AyuGram Android. Данные архива и настроек остаются в локальном хранилище плагина. Плагин не читает списки участников и не собирает чужие личные данные.")
 
     def help_text(self):
-        return ("SayPlugin 0.2.0\\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
-                ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen, .sayfind.\\n"
+        return ("SayPlugin 0.2.0\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
+                ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen, .sayfind.\n"
                 "Открой SayPlugin в меню Telegram для доступа к разделам.")
