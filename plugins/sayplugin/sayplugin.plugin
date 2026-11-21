@@ -184,9 +184,12 @@ class SayPlugin(BasePlugin):
         self.logger.info("SayPlugin 0.5.0 loaded")
 
     def install_theme_hooks(self):
+        """Prepare native Theme.setColor access; no method hooks are installed."""
         try:
             theme_class = find_class("org.telegram.ui.ActionBar.Theme")
             self.theme_key_ids = {}
+            self.theme_class = theme_class
+            self.theme_hooks = []
             if not theme_class:
                 self.logger.warning("Theme class unavailable; color customization disabled.")
                 return
@@ -196,14 +199,14 @@ class SayPlugin(BasePlugin):
                     self.theme_key_ids[int(field.get(None))] = name
                 except Exception:
                     continue
-            hooks = self.hook_all_methods(theme_class, "getColor", ThemeColorHook(self))
-            self.theme_hooks = hooks or []
-            self.logger.info("Theme color hook registered; recognized keys: %s", len(self.theme_key_ids))
-            if not self.theme_hooks:
-                self.logger.warning("Theme.getColor hooks were not registered.")
+            if not self.theme_key_ids:
+                self.logger.warning("No compatible Theme color keys were found.")
+                return
+            self.logger.info("Native Theme.setColor ready; recognized keys: %s", len(self.theme_key_ids))
         except Exception:
             self.theme_key_ids = {}
-            self.logger.exception("Could not initialize optional Telegram color customization.")
+            self.theme_class = None
+            self.logger.exception("Could not initialize native Telegram color customization.")
 
 
     # ---------- Native AyuGram chat-list filters ----------
@@ -347,25 +350,51 @@ class SayPlugin(BasePlugin):
         except Exception:
             self.logger.exception("Could not toggle native chat tabs.")
 
+    def _reload_native_theme(self):
+        theme_class = getattr(self, "theme_class", None) or find_class("org.telegram.ui.ActionBar.Theme")
+        if not theme_class:
+            raise RuntimeError("Класс Theme недоступен")
+        try:
+            current_theme = theme_class.getCurrentTheme()
+            theme_class.saveCurrentTheme(current_theme, False, False, False)
+        except Exception:
+            self.logger.warning("Theme colors changed in memory; saving current theme was unavailable.")
+        notification_class = find_class("org.telegram.messenger.NotificationCenter")
+        if not notification_class:
+            raise RuntimeError("NotificationCenter недоступен")
+        event = int(notification_class.getField("reloadInterface").get(None))
+        notification_class.getGlobalInstance().postNotificationName(event)
+
     def apply_theme_palette(self):
         if not self.get_setting("telegram_theme_enabled", False):
             BulletinHelper.show_info("Сначала включи экспериментальную цветовую тему.")
             return
-        if not getattr(self, "theme_hooks", None):
-            self.install_theme_hooks()
-        if not getattr(self, "theme_hooks", None) or not self.theme_key_ids:
-            BulletinHelper.show_error("Эта сборка AyuGram не подтвердила поддержку цветовых хуков.")
-            return
         try:
-            notification_class = find_class("org.telegram.messenger.NotificationCenter")
-            if not notification_class:
-                raise RuntimeError("NotificationCenter недоступен")
-            event = int(notification_class.getField("reloadInterface").get(None))
-            notification_class.getGlobalInstance().postNotificationName(event)
-            BulletinHelper.show_success("Палитра применена. Если экран не обновился, перезапусти AyuGram.")
+            if not getattr(self, "theme_key_ids", None):
+                self.install_theme_hooks()
+            theme_class = getattr(self, "theme_class", None)
+            if not theme_class or not self.theme_key_ids:
+                raise RuntimeError("В этой сборке не найдены поддерживаемые цвета Theme")
+            index = max(0, min(int(self.get_setting("telegram_palette", 0) or 0), len(PALETTES) - 1))
+            palette = PALETTES[index]
+            extra = PALETTE_EXTRA[index]
+            applied = 0
+            for key_id, key_name in self.theme_key_ids.items():
+                value = palette.get(key_name) or extra.get(key_name)
+                if not value:
+                    continue
+                color = int(value, 16)
+                if color >= 0x80000000:
+                    color -= 0x100000000
+                theme_class.setColor(int(key_id), int(color), False)
+                applied += 1
+            if applied < 5:
+                raise RuntimeError("Применилось слишком мало цветов: " + str(applied))
+            self._reload_native_theme()
+            BulletinHelper.show_success("Палитра применена: " + str(applied) + " цветов.")
         except Exception as error:
-            self.logger.exception("Could not refresh Telegram interface after palette change.")
-            BulletinHelper.show_error("Не удалось обновить интерфейс: " + str(error)[:120])
+            self.logger.exception("Could not apply native Telegram color palette.")
+            BulletinHelper.show_error("Ошибка цветовой темы: " + str(error)[:140])
 
     def on_palette_change(self, value):
         try:
@@ -377,21 +406,27 @@ class SayPlugin(BasePlugin):
 
     def on_theme_toggle(self, enabled: bool):
         if enabled:
-            if not getattr(self, "theme_hooks", None):
+            if not getattr(self, "theme_key_ids", None):
                 self.install_theme_hooks()
-            if not getattr(self, "theme_hooks", None) or not self.theme_key_ids:
+            if not getattr(self, "theme_key_ids", None):
                 self.set_setting("telegram_theme_enabled", False)
-                BulletinHelper.show_error("Цветовая тема не поддерживается этой сборкой; переключатель выключен.")
+                BulletinHelper.show_error("Цветовая тема не поддерживается этой сборкой.")
                 return
             self.apply_theme_palette()
         else:
-            for hook in getattr(self, "theme_hooks", []) or []:
-                try:
-                    self.unhook_method(hook)
-                except Exception:
-                    pass
-            self.theme_hooks = []
-            BulletinHelper.show_info("Переопределение цветов Telegram выключено.")
+            try:
+                if not getattr(self, "theme_key_ids", None):
+                    self.install_theme_hooks()
+                theme_class = getattr(self, "theme_class", None)
+                if not theme_class or not self.theme_key_ids:
+                    raise RuntimeError("Theme недоступна для сброса цветов")
+                for key_id in self.theme_key_ids:
+                    theme_class.setColor(int(key_id), 0, True)
+                self._reload_native_theme()
+                BulletinHelper.show_info("Цвета Telegram возвращены к исходной теме.")
+            except Exception as error:
+                self.logger.exception("Could not reset native Telegram palette.")
+                BulletinHelper.show_error("Не удалось сбросить тему: " + str(error)[:140])
 
     # ---------- Settings ----------
     def create_settings(self) -> List[Any]:
