@@ -1,27 +1,28 @@
 {
   "schema": 1,
   "name": "SayPlugin Repository",
-  "description": "Модульный набор инструментов и продуктивности для AyuGram Android.",
+  "description": "Модульный центр персонализации, работы с сообщениями, памяти и инструментов для AyuGram Android.",
   "author": "@zefut",
   "homepage": "https://github.com/zefut-creator/Premium-NFT-Finder",
   "plugins": [
     {
       "id": "sayplugin",
       "name": "SayPlugin",
-      "description": "Главное меню, автосокращения, быстрые текстовые команды и личный архив.",
+      "description": "Единая панель, настройки внешнего вида SayPlugin, автосокращения, шаблоны, личный архив и текстовые инструменты.",
       "author": "@zefut",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "icon": "exteraPlugins/1",
       "app_version": ">=12.5.1",
       "sdk_version": ">=1.4.4.3",
       "category": [
+        "appearance",
         "chats",
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "084ca5c68b62ea8f230039d3465379808b74417d7416aa56048c50aaa8d3ce72",
-      "size": 12022,
-      "updated_at": "2026-11-21T06:00:00Z"
+      "sha256": "3891151cb75cf3187a79259ba33a67c605764595545c0c40350dc7650133f30a",
+      "size": 23696,
+      "updated_at": "2026-11-21T00:00:00Z"
     }
   ]
 }
