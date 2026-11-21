@@ -8,9 +8,9 @@
     {
       "id": "sayplugin",
       "name": "SayPlugin",
-      "description": "Экспериментальная палитра Telegram с ручным обновлением интерфейса, автосокращения, локальный архив и текстовые инструменты.",
+      "description": "Родные вкладки чатов с фильтрацией и суммой непрочитанных, экспериментальная палитра Telegram, архив и инструменты.",
       "author": "@zefut",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "icon": "exteraPlugins/1",
       "app_version": ">=12.5.1",
       "sdk_version": ">=1.4.4.3",
@@ -20,9 +20,9 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "68548e4c4a282d56596555aa2e85ddb915ea5f1c2d18290a7079e35c8e820a0e",
-      "size": 43494,
-      "updated_at": "2026-11-21T18:00:00Z"
+      "sha256": "cba97ed99677757a1e900660c7f0201a02a4ac8aacc334a2f12cf98991e749cb",
+      "size": 50254,
+      "updated_at": "2026-11-21T14:00:00Z"
     }
   ]
 }
