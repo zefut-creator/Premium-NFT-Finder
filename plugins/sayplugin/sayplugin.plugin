@@ -140,7 +140,6 @@ class NativeChatUnreadHook(MethodHook):
             watched = (
                 int(notification_class.getField("dialogsUnreadCounterChanged").get(None)),
                 int(notification_class.getField("dialogsNeedReload").get(None)),
-                int(notification_class.getField("dialogsLoaded").get(None)),
             )
             if event_id in watched:
                 self.plugin.refresh_native_chat_tab_counts(param.thisObject)
