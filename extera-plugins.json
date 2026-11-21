@@ -8,7 +8,7 @@
     {
       "id": "sayplugin",
       "name": "SayPlugin",
-      "description": "Единая панель, настройки внешнего вида SayPlugin, автосокращения, шаблоны, личный архив и текстовые инструменты.",
+      "description": "Единая панель, пять цветовых палитр Telegram, настройки SayPlugin, автосокращения, шаблоны, архив и инструменты.",
       "author": "@zefut",
       "version": "0.2.0",
       "icon": "exteraPlugins/1",
@@ -20,8 +20,8 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "3891151cb75cf3187a79259ba33a67c605764595545c0c40350dc7650133f30a",
-      "size": 23696,
+      "sha256": "1831e5dc533fb16102a8a3babd070008bdaa59b799fe5a57a7b10814a3fefb6b",
+      "size": 29905,
       "updated_at": "2026-11-21T00:00:00Z"
     }
   ]
