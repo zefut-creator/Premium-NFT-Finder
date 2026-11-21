@@ -114,7 +114,10 @@ class SayPlugin(BasePlugin):
             text="Сохранить в SayPlugin", on_click=self.save_selected_message,
             icon="msg_saved", subtext="В личный архив", priority=10,
         ))
-        self.install_theme_hooks()
+        self.theme_hooks = []
+        self.theme_key_ids = {}
+        if self.get_setting("telegram_theme_enabled", False):
+            self.install_theme_hooks()
         self.logger.info("SayPlugin 0.2.0 loaded")
 
     def install_theme_hooks(self):
@@ -131,12 +134,27 @@ class SayPlugin(BasePlugin):
                 except Exception:
                     continue
             hooks = self.hook_all_methods(theme_class, "getColor", ThemeColorHook(self))
+            self.theme_hooks = hooks or []
             self.logger.info("Theme color hook registered; recognized keys: %s", len(self.theme_key_ids))
-            if not hooks:
+            if not self.theme_hooks:
                 self.logger.warning("Theme.getColor hooks were not registered.")
         except Exception:
             self.theme_key_ids = {}
             self.logger.exception("Could not initialize optional Telegram color customization.")
+
+    def on_theme_toggle(self, enabled: bool):
+        if enabled:
+            if not getattr(self, "theme_hooks", None):
+                self.install_theme_hooks()
+            BulletinHelper.show_info("Цветовая тема Telegram включена, если текущая сборка поддерживает нужные ключи.")
+        else:
+            for hook in getattr(self, "theme_hooks", []) or []:
+                try:
+                    self.unhook_method(hook)
+                except Exception:
+                    pass
+            self.theme_hooks = []
+            BulletinHelper.show_info("Переопределение цветов Telegram выключено.")
 
     # ---------- Settings ----------
     def create_settings(self) -> List[Any]:
@@ -146,7 +164,7 @@ class SayPlugin(BasePlugin):
                  icon="msg_info"),
             Header(text="01 · Внешний вид Telegram"),
             Switch(key="telegram_theme_enabled", text="Экспериментальная цветовая тема Telegram", default=False,
-                   subtext="Переопределяет поддерживаемые цвета клиента. Выключено по умолчанию; зависит от версии AyuGram.", icon="msg_theme"),
+                   subtext="Переопределяет поддерживаемые цвета клиента. Выключено по умолчанию; зависит от версии AyuGram.", icon="msg_theme", on_change=self.on_theme_toggle),
             Selector(key="telegram_palette", text="Цветовая палитра", default=0,
                      items=["Океан", "Мята", "Роза", "Фиолетовый", "Графит"], icon="msg_color"),
             Header(text="Оформление панели SayPlugin"),
@@ -417,11 +435,13 @@ class SayPlugin(BasePlugin):
     def show_appearance(self):
         density = ["Компактная", "Обычная", "Подробная"]
         index = int(self.get_setting("dashboard_density", 1) or 1)
-        self._show_text_dialog("Внешний вид SayPlugin",
+        self._show_text_dialog("Внешний вид Telegram и SayPlugin",
             f"Стиль панели: {density[max(0, min(index, 2))]}\n"
             f"Иконки: {'включены' if self.get_setting('dashboard_emoji', True) else 'выключены'}\n"
-            f"Описание: {'включено' if self.get_setting('dashboard_intro', True) else 'выключено'}\n\n"
-            "Эти параметры меняют панель SayPlugin. Системные цвета, шрифты, фон и расположение элементов самого AyuGram пока не изменяются: для них нужен отдельный подтверждённый API интерфейса.")
+            f"Описание панели: {'включено' if self.get_setting('dashboard_intro', True) else 'выключено'}\n"
+            f"Цветовая тема Telegram: {'включена' if self.get_setting('telegram_theme_enabled', False) else 'выключена'}\n"
+            f"Палитра: {['Океан', 'Мята', 'Роза', 'Фиолетовый', 'Графит'][max(0, min(int(self.get_setting('telegram_palette', 0) or 0), 4))]}\n\n"
+            "Цветовой режим экспериментальный: меняет только распознанные Theme-ключи и зависит от версии клиента. Если оформление выглядит некорректно, выключи переключатель.")
 
     def show_utilities(self):
         self._show_text_dialog("Инструменты",
