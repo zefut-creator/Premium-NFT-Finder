@@ -10,7 +10,7 @@
       "name": "SayPlugin",
       "description": "Вложенные страницы настроек, экспериментальные палитры Telegram, автосокращения, локальный архив и текстовые инструменты.",
       "author": "@zefut",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "icon": "exteraPlugins/1",
       "app_version": ">=12.5.1",
       "sdk_version": ">=1.4.4.3",
@@ -20,9 +20,9 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "31658abadd6869d99185da350216cbed4fddde405186963ca8d37899a0ab4820",
-      "size": 34817,
-      "updated_at": "2026-11-21T00:00:00Z"
+      "sha256": "bb794812a67ebf15e676117890813bf946f163263dee01e828b88c6fd9bd19ae",
+      "size": 42158,
+      "updated_at": "2026-11-21T13:50:00Z"
     }
   ]
 }
