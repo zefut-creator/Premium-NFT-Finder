@@ -8,7 +8,7 @@
     {
       "id": "sayplugin",
       "name": "SayPlugin",
-      "description": "Родные вкладки чатов с фильтрацией и суммой непрочитанных, экспериментальная палитра Telegram, архив и инструменты.",
+      "description": "Нативные вкладки чатов с фильтрацией и суммой непрочитанных, экспериментальная палитра Telegram, архив и инструменты.",
       "author": "@zefut",
       "version": "0.5.0",
       "icon": "exteraPlugins/1",
@@ -20,9 +20,9 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "cba97ed99677757a1e900660c7f0201a02a4ac8aacc334a2f12cf98991e749cb",
-      "size": 50254,
-      "updated_at": "2026-11-21T14:00:00Z"
+      "sha256": "03bbae09d75a25c512402c74b3ebc717ba400eebe5d62067cdc2d57cf60ff13d",
+      "size": 51357,
+      "updated_at": "2026-11-21T14:10:00Z"
     }
   ]
 }
