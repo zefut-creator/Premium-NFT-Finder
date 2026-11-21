@@ -30,7 +30,7 @@ DEFAULT_SHORTCUTS = """;пр=Привет, как дела?
 ;время={time}"""
 MAX_ARCHIVE_ITEMS = 300
 MAX_TEXT = 12000
-SHORTCUT_RE = re.compile(r"(?<!\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\S)")
+SHORTCUT_RE = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9_])(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?![A-Za-zА-Яа-яЁё0-9_])")
 
 
 def parse_shortcuts(raw: str) -> Dict[str, str]:
@@ -540,7 +540,7 @@ class SayPlugin(BasePlugin):
             f"Очистка пробелов: {'вкл' if self.get_setting('clean_spaces', False) else 'выкл'}\n"
             f"Автозаглавная: {'вкл' if self.get_setting('capitalize_first', False) else 'выкл'}\n"
             f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\n\n"
-            "Панель и текстовые функции используют публичные API SDK. Глубокая смена темы AyuGram ещё не реализована и требует проверки API."
+            "Панель и текстовые функции используют документированные API SDK. Перекраска Telegram экспериментальная и требует проверки на конкретной сборке AyuGram."
         )
         self._show_text_dialog("SayPlugin · Диагностика", status)
 
@@ -550,5 +550,5 @@ class SayPlugin(BasePlugin):
 
     def help_text(self):
         return ("SayPlugin 0.3.0\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
-                ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen. .sayfind и .sayarchive открывают локальный архив и не отправляют его содержимое в чат.\n"
+                ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen.\n.sayfind слово — поиск в архиве; .sayarchive — открыть архив. Эти две команды выполняются локально.\n"
                 "Открой SayPlugin в меню Telegram для доступа к разделам.")
