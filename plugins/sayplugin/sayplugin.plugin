@@ -4,29 +4,31 @@ import re
 from typing import Any, Dict, List
 
 from base_plugin import BasePlugin, HookResult, HookStrategy, MenuItemData, MenuItemType
-from ui.settings import Header, Switch, EditText, Text
+from ui.settings import Header, Switch, Selector, EditText, Text, Divider
 from ui.alert import AlertDialogBuilder
 from ui.bulletin import BulletinHelper
 from client_utils import get_last_fragment
 
 __id__ = "sayplugin"
 __name__ = "SayPlugin"
-__description__ = "Personal Telegram toolkit: text shortcuts, message archive and quick commands."
+__description__ = "Модульный центр персонализации, текста, памяти и инструментов для AyuGram."
 __author__ = "@zefut"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __icon__ = "exteraPlugins/1"
 __app_version__ = ">=12.5.1"
 __sdk_version__ = ">=1.4.4.3"
-__category__ = ["chats", "tools"]
+__category__ = ["appearance", "chats", "tools"]
 
 DEFAULT_SHORTCUTS = """;пр=Привет, как дела?
 ;спс=Большое спасибо!
 ;пж=Пожалуйста!
 ;сори=Извини, пожалуйста.
+;имя=Меня зовут
 ;дата={date}
 ;время={time}"""
-MAX_ARCHIVE_ITEMS = 100
-SHORTCUT_PATTERN = re.compile(r"(?<!\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\S)")
+MAX_ARCHIVE_ITEMS = 300
+MAX_TEXT = 12000
+SHORTCUT_RE = re.compile(r"(?<!\\S)(;[A-Za-zА-Яа-яЁё0-9_]{1,32})(?!\\S)")
 
 
 def parse_shortcuts(raw: str) -> Dict[str, str]:
@@ -38,16 +40,23 @@ def parse_shortcuts(raw: str) -> Dict[str, str]:
         key, value = line.split("=", 1)
         key, value = key.strip(), value.strip()
         if re.fullmatch(r";[A-Za-zА-Яа-яЁё0-9_]{1,32}", key) and value:
-            result[key] = value
+            result[key] = value[:2000]
     return result
 
 
 def safe_json_list(raw: Any) -> List[dict]:
     try:
-        data = json.loads(raw) if isinstance(raw, str) else raw
-        return data if isinstance(data, list) else []
+        value = json.loads(raw) if isinstance(raw, str) else raw
+        return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
     except Exception:
         return []
+
+
+def clean_text(value: str) -> str:
+    value = re.sub(r"[ \\t]+", " ", value or "")
+    value = re.sub(r" *\\n *", "\\n", value)
+    value = re.sub(r"\\n{3,}", "\\n\\n", value)
+    return value.strip()
 
 
 class SayPlugin(BasePlugin):
@@ -56,85 +65,248 @@ class SayPlugin(BasePlugin):
         self.add_menu_item(MenuItemData(
             menu_type=MenuItemType.MAIN_MENU, text="SayPlugin",
             on_click=self.open_dashboard, icon="msg_tools",
-            subtext="Личный набор инструментов", priority=5,
+            subtext="Персональный центр Telegram", priority=10,
+        ))
+        self.add_menu_item(MenuItemData(
+            menu_type=MenuItemType.CHAT_ACTION_MENU, text="SayPlugin",
+            on_click=self.open_dashboard, icon="msg_settings",
+            subtext="Инструменты текущего чата", priority=10,
         ))
         self.add_menu_item(MenuItemData(
             menu_type=MenuItemType.MESSAGE_CONTEXT_MENU,
             text="Сохранить в SayPlugin", on_click=self.save_selected_message,
-            icon="msg_saved", subtext="Добавить сообщение в личный архив",
-            priority=5,
+            icon="msg_saved", subtext="В личный архив", priority=10,
         ))
-        self.logger.info("SayPlugin 0.1.0 loaded")
+        self.logger.info("SayPlugin 0.2.0 loaded")
 
+    # ---------- Settings ----------
     def create_settings(self) -> List[Any]:
         return [
-            Header(text="SayPlugin — основные настройки"),
-            Switch(key="shortcuts_enabled", text="Автоматические сокращения",
-                   default=True, subtext="Заменять ;пр и другие сокращения перед отправкой.",
-                   icon="msg_edit"),
-            EditText(key="shortcuts", hint="Одно сокращение на строку: ;пр=Привет!",
-                     default=DEFAULT_SHORTCUTS, multiline=True, max_length=12000),
-            Text(text="Формат сокращений",
-                 subtext="Каждая строка: ;ключ=полный текст. Переменные: {date}, {time}.",
+            Header(text="SayPlugin · Центр управления"),
+            Text(text="Открой SayPlugin из главного меню. Разделы и настройки ниже сохраняются локально в настройках плагина.",
                  icon="msg_info"),
-            Header(text="Личный архив"),
-            Text(text="Сохранённые сообщения",
-                 subtext="Сохраняются только сообщения, которые ты сам добавил через контекстное меню. Лимит — 100 записей.",
-                 icon="msg_saved"),
-            Header(text="Команды"),
-            Text(text=".sayhelp · .saydate · .saytime · .sayupper текст · .saylower текст · .saylen текст",
-                 icon="msg_info"),
+            Header(text="01 · Интерфейс SayPlugin"),
+            Selector(key="dashboard_density", text="Плотность меню", default=1,
+                     items=["Компактная", "Обычная", "Подробная"], icon="msg_list"),
+            Switch(key="dashboard_emoji", text="Иконки в меню", default=True,
+                   subtext="Показывать значки рядом с разделами.", icon="msg_stickers"),
+            Switch(key="dashboard_intro", text="Описание на главном экране", default=True,
+                   icon="msg_info"),
+            Header(text="02 · Интеллект и память"),
+            Switch(key="archive_enabled", text="Личный архив", default=True,
+                   subtext="Сохраняй только сообщения, которые выбрал сам.", icon="msg_saved"),
+            Selector(key="archive_limit", text="Размер архива", default=1,
+                     items=["100 записей", "300 записей", "500 записей"], icon="msg_storage"),
+            Header(text="03 · Работа с сообщениями"),
+            Switch(key="shortcuts_enabled", text="Автосокращения", default=True,
+                   subtext="Заменять ;пр и другие ключи в отправляемом тексте.", icon="msg_edit"),
+            EditText(key="shortcuts", hint=";ключ=полный текст (по одной строке)", default=DEFAULT_SHORTCUTS,
+                     multiline=True, max_length=MAX_TEXT),
+            Switch(key="clean_spaces", text="Убирать лишние пробелы", default=False,
+                   subtext="Схлопывать повторные пробелы и лишние пустые строки.", icon="msg_format"),
+            Switch(key="capitalize_first", text="Заглавная буква в начале", default=False,
+                   subtext="Автоматически делать первую букву сообщения заглавной.", icon="msg_text"),
+            Switch(key="signature_enabled", text="Подпись в конце сообщения", default=False,
+                   subtext="Выключено по умолчанию. Добавляется только к твоим обычным текстовым сообщениям.", icon="msg_edit"),
+            EditText(key="signature", hint="Текст подписи", default="", multiline=False, max_length=160),
+            Header(text="04 · Автоматизация"),
+            Switch(key="macros_enabled", text="Текстовые команды", default=True,
+                   subtext="Команды обработки текста выполняются только при отправке соответствующей команды.", icon="msg_command"),
+            EditText(key="templates", hint="Шаблоны: ;ключ=текст", default=";встреча=Здравствуйте! Предлагаю обсудить детали.\\n;занят=Сейчас занят, отвечу позже.", multiline=True, max_length=MAX_TEXT),
+            Header(text="05 · Диагностика"),
+            Text(text="Проверить состояние модулей", icon="msg_info",
+                 on_click=lambda view: self.show_module_status()),
+            Text(text="О возможностях и ограничениях", icon="msg_help",
+                 on_click=lambda view: self.show_about()),
         ]
 
+    # ---------- Outgoing text engine ----------
     def on_send_message_hook(self, account: int, params: Any) -> HookResult:
         message = getattr(params, "message", None)
         if not isinstance(message, str) or not message.strip():
             return HookResult()
-        raw, lowered = message.strip(), message.strip().lower()
+        raw = message
+        lowered = raw.strip().lower()
 
-        if lowered == ".sayhelp":
-            params.message = (
-                "SayPlugin 0.1.0\nСокращения: ;пр, ;спс, ;пж, ;сори, ;дата, ;время.\n"
-                "Команды: .saydate, .saytime, .sayupper текст, .saylower текст, .saylen текст.\n"
-                "Сохраняй сообщения через контекстное меню → «Сохранить в SayPlugin»."
-            )
-            return HookResult(strategy=HookStrategy.MODIFY, params=params)
-        if lowered == ".saydate":
-            params.message = datetime.now().strftime("%d.%m.%Y")
-            return HookResult(strategy=HookStrategy.MODIFY, params=params)
-        if lowered == ".saytime":
-            params.message = datetime.now().strftime("%H:%M")
-            return HookResult(strategy=HookStrategy.MODIFY, params=params)
-        for command, transform in ((".sayupper ", str.upper), (".saylower ", str.lower)):
-            if lowered.startswith(command):
-                params.message = transform(raw[len(command):])
+        if self.get_setting("macros_enabled", True):
+            command_result = self.run_text_command(raw)
+            if command_result is not None:
+                params.message = command_result
                 return HookResult(strategy=HookStrategy.MODIFY, params=params)
-        if lowered.startswith(".saylen "):
-            body = raw[len(".saylen "):]
-            params.message = f"Символов: {len(body)} · Слов: {len(body.split())}"
-            return HookResult(strategy=HookStrategy.MODIFY, params=params)
 
-        if not self.get_setting("shortcuts_enabled", True):
-            return HookResult()
-        shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
-        now = datetime.now()
-        replacements = {"{date}": now.strftime("%d.%m.%Y"), "{time}": now.strftime("%H:%M")}
+        updated = raw
+        if self.get_setting("shortcuts_enabled", True):
+            shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
+            shortcuts.update(parse_shortcuts(self.get_setting("templates", "")))
+            now = datetime.now()
+            variables = {"{date}": now.strftime("%d.%m.%Y"), "{time}": now.strftime("%H:%M")}
+            def replace_match(match):
+                value = shortcuts.get(match.group(1))
+                if value is None:
+                    return match.group(1)
+                for marker, replacement in variables.items():
+                    value = value.replace(marker, replacement)
+                return value
+            updated = SHORTCUT_RE.sub(replace_match, updated)
 
-        def replace_match(match):
-            value = shortcuts.get(match.group(1))
-            if value is None:
-                return match.group(1)
-            for marker, replacement in replacements.items():
-                value = value.replace(marker, replacement)
-            return value
+        if self.get_setting("clean_spaces", False):
+            updated = clean_text(updated)
+        if self.get_setting("capitalize_first", False) and updated:
+            for index, char in enumerate(updated):
+                if char.isalpha():
+                    updated = updated[:index] + char.upper() + updated[index + 1:]
+                    break
 
-        updated = SHORTCUT_PATTERN.sub(replace_match, message)
-        if updated != message:
+        if self.get_setting("signature_enabled", False):
+            signature = str(self.get_setting("signature", "") or "").strip()
+            if signature and not updated.startswith(".say") and not updated.endswith(signature):
+                updated = updated.rstrip() + "\\n" + signature
+
+        if updated != raw:
             params.message = updated
             return HookResult(strategy=HookStrategy.MODIFY, params=params)
         return HookResult()
 
+    def run_text_command(self, raw: str):
+        text = raw.strip()
+        lowered = text.lower()
+        if lowered == ".sayhelp":
+            return self.help_text()
+        if lowered == ".saydate":
+            return datetime.now().strftime("%d.%m.%Y")
+        if lowered == ".saytime":
+            return datetime.now().strftime("%H:%M")
+        if lowered == ".sayarchive":
+            return "Открой SayPlugin → «Мой архив», чтобы просмотреть сохранённое."
+        if lowered.startswith(".sayfind "):
+            query = text[9:].strip().lower()
+            if not query:
+                return "Укажи слово для поиска: .sayfind текст"
+            rows = safe_json_list(self.get_setting("archive_json", "[]"))
+            matches = [row for row in rows if query in str(row.get("text", "")).lower()]
+            if not matches:
+                return "В личном архиве ничего не найдено."
+            return "Найдено в личном архиве:\\n" + "\\n\\n".join(
+                "• " + str(row.get("date", "Без даты")) + "\\n" + str(row.get("text", ""))[:350]
+                for row in matches[:8]
+            )
+        if lowered.startswith(".sayupper "):
+            return text[10:].upper()
+        if lowered.startswith(".saylower "):
+            return text[10:].lower()
+        if lowered.startswith(".saytitle "):
+            return text[10:].title()
+        if lowered.startswith(".sayclean "):
+            return clean_text(text[10:])
+        if lowered.startswith(".sayreverse "):
+            return text[12:][::-1]
+        if lowered.startswith(".sayquote "):
+            return "\\n".join("> " + line for line in text[10:].splitlines())
+        if lowered.startswith(".saybullets "):
+            lines = [line.strip() for line in text[12:].splitlines() if line.strip()]
+            return "\\n".join("• " + line.lstrip("•-— ").strip() for line in lines)
+        if lowered.startswith(".saylen "):
+            body = text[8:]
+            return f"Символов: {len(body)} · Слов: {len(body.split())} · Строк: {len(body.splitlines())}"
+        if lowered.startswith(".saydate "):
+            return text[9:].replace("{date}", datetime.now().strftime("%d.%m.%Y"))
+        return None
+
+    # ---------- Dashboard ----------
+    def open_dashboard(self, context: Dict[str, Any]):
+        fragment = get_last_fragment()
+        activity = fragment.getParentActivity() if fragment else None
+        if not activity:
+            BulletinHelper.show_error("Окно Telegram недоступно.")
+            return
+        emoji = self.get_setting("dashboard_emoji", True)
+        items = [
+            (("📚 " if emoji else "") + "Мой архив"),
+            (("⌨️ " if emoji else "") + "Текст и шаблоны"),
+            (("⚡ " if emoji else "") + "Автоматизация"),
+            (("🎨 " if emoji else "") + "Внешний вид SayPlugin"),
+            (("🧰 " if emoji else "") + "Инструменты"),
+            (("🧪 " if emoji else "") + "Лаборатория"),
+            (("📊 " if emoji else "") + "Статус и диагностика"),
+        ]
+        density = int(self.get_setting("dashboard_density", 1) or 1)
+        if density == 0:
+            items = items[:5]
+        def on_item_click(builder, which):
+            builder.dismiss()
+            actions = [self.show_archive, self.show_text_tools, self.show_automation,
+                       self.show_appearance, self.show_utilities, self.show_lab,
+                       self.show_module_status]
+            if 0 <= which < len(actions):
+                actions[which]()
+        builder = AlertDialogBuilder(activity)
+        builder.set_title("SayPlugin · Центр")
+        if self.get_setting("dashboard_intro", True):
+            builder.set_message("Настрой Telegram под себя: сообщения, память, автоматизация и оформление панели плагина.")
+        builder.set_items(items, on_item_click)
+        builder.set_negative_button("Закрыть", lambda b, w: b.dismiss())
+        builder.show()
+
+    def _show_text_dialog(self, title: str, body: str):
+        fragment = get_last_fragment()
+        activity = fragment.getParentActivity() if fragment else None
+        if not activity:
+            BulletinHelper.show_error("Окно Telegram недоступно.")
+            return
+        builder = AlertDialogBuilder(activity)
+        builder.set_title(title)
+        builder.set_message((body or "Пока пусто.")[:MAX_TEXT])
+        builder.set_positive_button("Готово", lambda b, w: b.dismiss())
+        builder.show()
+
+    def show_archive(self):
+        if not self.get_setting("archive_enabled", True):
+            self._show_text_dialog("Мой архив", "Архив отключён в настройках SayPlugin.")
+            return
+        archive = safe_json_list(self.get_setting("archive_json", "[]"))
+        if not archive:
+            self._show_text_dialog("Мой архив", "Пока пусто. Выбери текстовое сообщение → «Сохранить в SayPlugin».")
+            return
+        fragment = get_last_fragment()
+        activity = fragment.getParentActivity() if fragment else None
+        if not activity:
+            BulletinHelper.show_error("Окно Telegram недоступно.")
+            return
+        labels = [f"{i + 1}. {row.get('date', 'Без даты')} — {str(row.get('text', '')).replace(chr(10), ' ')[:65]}"
+                  for i, row in enumerate(archive)]
+        def on_item_click(builder, which):
+            builder.dismiss()
+            if 0 <= which < len(archive):
+                row = archive[which]
+                self._show_text_dialog(row.get("date", "Запись"), row.get("text", ""))
+        builder = AlertDialogBuilder(activity)
+        builder.set_title(f"Мой архив · {len(archive)}")
+        builder.set_items(labels, on_item_click)
+        builder.set_negative_button("Закрыть", lambda b, w: b.dismiss())
+        builder.set_neutral_button("Очистить", lambda b, w: self.confirm_clear_archive(b))
+        builder.show()
+
+    def confirm_clear_archive(self, parent):
+        parent.dismiss()
+        fragment = get_last_fragment()
+        activity = fragment.getParentActivity() if fragment else None
+        if not activity:
+            return
+        builder = AlertDialogBuilder(activity)
+        builder.set_title("Очистить архив?")
+        builder.set_message("Все сохранённые записи SayPlugin будут удалены. Это действие нельзя отменить.")
+        def clear(b, w):
+            self.set_setting("archive_json", "[]")
+            b.dismiss()
+            BulletinHelper.show_info("Личный архив очищен.")
+        builder.set_positive_button("Очистить", clear)
+        builder.set_negative_button("Отмена", lambda b, w: b.dismiss())
+        builder.show()
+
     def save_selected_message(self, context: Dict[str, Any]):
+        if not self.get_setting("archive_enabled", True):
+            BulletinHelper.show_info("Включи личный архив в настройках SayPlugin.")
+            return
         message = context.get("message")
         if message is None:
             BulletinHelper.show_error("Не удалось получить сообщение.")
@@ -152,86 +324,72 @@ class SayPlugin(BasePlugin):
             dialog_id = int(context.get("dialog_id") or 0)
         except Exception:
             dialog_id = 0
-        archive.insert(0, {"text": text[:4000],
-                           "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
-                           "message_id": message_id, "dialog_id": dialog_id})
-        self.set_setting("archive_json", json.dumps(archive[:MAX_ARCHIVE_ITEMS], ensure_ascii=False))
+        if any(row.get("message_id") == message_id and row.get("dialog_id") == dialog_id for row in archive):
+            BulletinHelper.show_info("Это сообщение уже есть в архиве.")
+            return
+        archive.insert(0, {"text": text[:4000], "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
+                           "message_id": message_id, "dialog_id": dialog_id, "favorite": False})
+        limits = [100, 300, 500]
+        limit_index = int(self.get_setting("archive_limit", 1) or 1)
+        limit = limits[max(0, min(limit_index, 2))]
+        self.set_setting("archive_json", json.dumps(archive[:limit], ensure_ascii=False))
         BulletinHelper.show_info("Сохранено в личный архив SayPlugin.")
 
-    def open_dashboard(self, context: Dict[str, Any]):
-        fragment = get_last_fragment()
-        activity = fragment.getParentActivity() if fragment else None
-        if not activity:
-            BulletinHelper.show_error("Окно Telegram недоступно.")
-            return
-        items = ["📚 Мой архив", "⌨️ Мои сокращения", "🧰 Быстрые команды", "📊 Статус модулей"]
-        def on_item_click(builder, which):
-            builder.dismiss()
-            if which == 0: self.show_archive()
-            elif which == 1: self.show_shortcuts()
-            elif which == 2: self.show_commands()
-            elif which == 3: self.show_module_status()
-        builder = AlertDialogBuilder(activity)
-        builder.set_title("SayPlugin")
-        builder.set_message("Твой личный центр инструментов Telegram.")
-        builder.set_items(items, on_item_click)
-        builder.set_negative_button("Закрыть", lambda b, w: b.dismiss())
-        builder.show()
+    # ---------- Module pages ----------
+    def show_text_tools(self):
+        self._show_text_dialog("Текст и шаблоны",
+            "Автосокращения: ;пр, ;спс, ;пж, ;дата, ;время и собственные ключи.\n\n"
+            "Команды:\\n.sayupper текст — ВЕРХНИЙ РЕГИСТР\\n.saylower текст — нижний регистр\\n"
+            ".saytitle текст — Заглавные Буквы\\n.sayclean текст — очистить пробелы\\n"
+            ".sayquote текст — оформить цитатой\\n.saybullets строки — список\\n"
+            ".saylen текст — статистика текста\\n.sayfind слово — поиск по личному архиву")
 
-    def _show_text_dialog(self, title: str, text: str):
-        fragment = get_last_fragment()
-        activity = fragment.getParentActivity() if fragment else None
-        if not activity:
-            BulletinHelper.show_error("Окно Telegram недоступно.")
-            return
-        builder = AlertDialogBuilder(activity)
-        builder.set_title(title)
-        builder.set_message(text[:12000])
-        builder.set_positive_button("Готово", lambda b, w: b.dismiss())
-        builder.show()
+    def show_automation(self):
+        self._show_text_dialog("Автоматизация",
+            "Доступно сейчас:\\n• Сокращения и шаблоны при отправке\\n• Переменные {date} и {time}\\n"
+            "• Подпись в конце сообщения (по умолчанию выключена)\\n• Очистка пробелов и заглавная буква — по настройке.\\n\\n"
+            "Все изменения происходят только в твоём исходящем тексте. Автоматической рассылки нет.")
 
-    def show_archive(self):
-        archive = safe_json_list(self.get_setting("archive_json", "[]"))
-        if not archive:
-            self._show_text_dialog("SayPlugin — архив",
-                "Архив пока пуст. Открой контекстное меню текстового сообщения и выбери «Сохранить в SayPlugin».")
-            return
-        fragment = get_last_fragment()
-        activity = fragment.getParentActivity() if fragment else None
-        if not activity:
-            BulletinHelper.show_error("Окно Telegram недоступно.")
-            return
-        labels = [f"{i + 1}. {item.get('date', 'Без даты')} — {item.get('text', '')[:70].replace(chr(10), ' ')}"
-                  for i, item in enumerate(archive)]
-        def on_item_click(builder, which):
-            builder.dismiss()
-            if 0 <= which < len(archive):
-                item = archive[which]
-                self._show_text_dialog(item.get("date", "Сохранённое сообщение"), item.get("text", ""))
-        builder = AlertDialogBuilder(activity)
-        builder.set_title(f"Мой архив · {len(archive)}")
-        builder.set_items(labels, on_item_click)
-        builder.set_negative_button("Закрыть", lambda b, w: b.dismiss())
-        builder.show()
+    def show_appearance(self):
+        density = ["Компактная", "Обычная", "Подробная"]
+        index = int(self.get_setting("dashboard_density", 1) or 1)
+        self._show_text_dialog("Внешний вид SayPlugin",
+            f"Стиль панели: {density[max(0, min(index, 2))]}\\n"
+            f"Иконки: {'включены' if self.get_setting('dashboard_emoji', True) else 'выключены'}\\n"
+            f"Описание: {'включено' if self.get_setting('dashboard_intro', True) else 'выключено'}\\n\\n"
+            "Эти параметры меняют панель SayPlugin. Системные цвета, шрифты, фон и расположение элементов самого AyuGram пока не изменяются: для них нужен отдельный подтверждённый API интерфейса.")
 
-    def show_shortcuts(self):
-        shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
-        content = "\n".join(f"{key} → {value}" for key, value in shortcuts.items())
-        self._show_text_dialog("SayPlugin — сокращения", content or "Сокращений пока нет. Добавь их в настройках.")
+    def show_utilities(self):
+        self._show_text_dialog("Инструменты",
+            "• .saydate — текущая дата\\n• .saytime — текущее время\\n• .saylen текст — символы, слова и строки\\n"
+            "• .sayclean текст — убрать лишние пробелы\\n• .sayreverse текст — перевернуть текст\\n"
+            "• .sayquote текст — оформить цитатой\\n• .saybullets строки — сделать список")
 
-    def show_commands(self):
-        self._show_text_dialog("SayPlugin — быстрые команды",
-            ".sayhelp — справка\n.saydate — текущая дата\n.saytime — текущее время\n"
-            ".sayupper текст — ВЕРХНИЙ РЕГИСТР\n.saylower текст — нижний регистр\n"
-            ".saylen текст — количество символов и слов")
+    def show_lab(self):
+        self._show_text_dialog("Лаборатория",
+            "Экспериментальные возможности будут включаться отдельно. Здесь появятся диагностика SDK, тесты совместимости и предварительный просмотр новых функций. Непроверенные изменения интерфейса Telegram не включаются автоматически.")
 
     def show_module_status(self):
         archive_count = len(safe_json_list(self.get_setting("archive_json", "[]")))
-        shortcut_count = len(parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS)))
-        status = ("Активно в версии 0.1.0:\n"
-                  f"• Автосокращения: {shortcut_count}\n"
-                  "• Команды обработки текста: 6\n"
-                  f"• Личный архив: {archive_count}/{MAX_ARCHIVE_ITEMS}\n"
-                  "• Главное меню: включено\n\n"
-                  "Остальные модули будут добавляться отдельными обновлениями.")
-        self._show_text_dialog("SayPlugin — статус", status)
+        shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
+        templates = parse_shortcuts(self.get_setting("templates", ""))
+        status = (
+            "SayPlugin 0.2.0\\n\\n"
+            f"Текстовый движок: {'вкл' if self.get_setting('macros_enabled', True) else 'выкл'}\\n"
+            f"Автосокращения: {'вкл' if self.get_setting('shortcuts_enabled', True) else 'выкл'} ({len(shortcuts) + len(templates)} ключей)\\n"
+            f"Личный архив: {'вкл' if self.get_setting('archive_enabled', True) else 'выкл'} ({archive_count} записей)\\n"
+            f"Очистка пробелов: {'вкл' if self.get_setting('clean_spaces', False) else 'выкл'}\\n"
+            f"Автозаглавная: {'вкл' if self.get_setting('capitalize_first', False) else 'выкл'}\\n"
+            f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\\n\\n"
+            "Панель и текстовые функции используют публичные API SDK. Глубокая смена темы AyuGram ещё не реализована и требует проверки API."
+        )
+        self._show_text_dialog("SayPlugin · Диагностика", status)
+
+    def show_about(self):
+        self._show_text_dialog("О SayPlugin",
+            "SayPlugin — модульный набор инструментов для AyuGram Android. Данные архива и настроек остаются в локальном хранилище плагина. Плагин не читает списки участников и не собирает чужие личные данные.")
+
+    def help_text(self):
+        return ("SayPlugin 0.2.0\\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
+                ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen, .sayfind.\\n"
+                "Открой SayPlugin в меню Telegram для доступа к разделам.")
