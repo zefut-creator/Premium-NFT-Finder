@@ -86,6 +86,16 @@ PALETTES = [
 ]
 
 
+
+PALETTE_EXTRA = [
+    {"key_actionBarDefaultIcon":"FFFFFFFF","key_actionBarDefaultSelector":"334C7088","key_windowBackgroundWhiteGrayText":"FF61758A","key_windowBackgroundWhiteGrayText2":"FF8293A5","key_windowBackgroundWhiteGrayIcon":"FF7C91A4","key_windowBackgroundWhiteBlueText":"FF2476B8","key_divider":"FFDDE6EE","key_dialogTextBlack":"FF182B3A","key_dialogTextGray3":"FF687C8F","key_chat_messagePanelText":"FF1A2733","key_chat_messagePanelHint":"FF8092A3","key_chat_messagePanelIcons":"FF6E8295","key_chat_serviceBackground":"E6DCEAF4","key_chat_serviceText":"FF456178","key_chat_inTimeText":"FF8B9BA9","key_chat_outTimeText":"FF52718A","key_chat_messageLinkIn":"FF2A78B9","key_chat_messageLinkOut":"FF1C6DA7","key_chat_inReplyLine":"FF7A9DBB","key_chat_outReplyLine":"FF4F94C4","key_chat_inBubbleSelected":"FFEAF3FA","key_chat_outBubbleSelected":"FFB9D8F1","key_profile_title":"FF182B3A","key_profile_status":"FF6E8496"},
+    {"key_actionBarDefaultIcon":"FFFFFFFF","key_actionBarDefaultSelector":"334F8C7C","key_windowBackgroundWhiteGrayText":"FF587B70","key_windowBackgroundWhiteGrayText2":"FF7C9D91","key_windowBackgroundWhiteGrayIcon":"FF73958A","key_windowBackgroundWhiteBlueText":"FF23836C","key_divider":"FFD9EAE3","key_dialogTextBlack":"FF17382F","key_dialogTextGray3":"FF66877B","key_chat_messagePanelText":"FF17382F","key_chat_messagePanelHint":"FF7D9B90","key_chat_messagePanelIcons":"FF6B8D81","key_chat_serviceBackground":"E6DCEFE6","key_chat_serviceText":"FF426B5B","key_chat_inTimeText":"FF8CA99D","key_chat_outTimeText":"FF568675","key_chat_messageLinkIn":"FF25866E","key_chat_messageLinkOut":"FF1E8067","key_chat_inReplyLine":"FF7AB19D","key_chat_outReplyLine":"FF4A9B7D","key_chat_inBubbleSelected":"FFEAF7F0","key_chat_outBubbleSelected":"FFB8E5D2","key_profile_title":"FF17382F","key_profile_status":"FF66877B"},
+    {"key_actionBarDefaultIcon":"FFFFFFFF","key_actionBarDefaultSelector":"33773B56","key_windowBackgroundWhiteGrayText":"FF876779","key_windowBackgroundWhiteGrayText2":"FFA58D9B","key_windowBackgroundWhiteGrayIcon":"FF9B7F8F","key_windowBackgroundWhiteBlueText":"FFB34F78","key_divider":"FFEEDCE4","key_dialogTextBlack":"FF432532","key_dialogTextGray3":"FF8D6F7E","key_chat_messagePanelText":"FF432532","key_chat_messagePanelHint":"FFAA8797","key_chat_messagePanelIcons":"FF987789","key_chat_serviceBackground":"E6F4E4EB","key_chat_serviceText":"FF80566B","key_chat_inTimeText":"FFB49BA8","key_chat_outTimeText":"FFAC6886","key_chat_messageLinkIn":"FFB64F7A","key_chat_messageLinkOut":"FFAC426F","key_chat_inReplyLine":"FFD18BA9","key_chat_outReplyLine":"FFC06A91","key_chat_inBubbleSelected":"FFFFEDF3","key_chat_outBubbleSelected":"FFF1BED2","key_profile_title":"FF432532","key_profile_status":"FF8D6F7E"},
+    {"key_actionBarDefaultIcon":"FFFFFFFF","key_actionBarDefaultSelector":"334D3A78","key_windowBackgroundWhiteGrayText":"FF71658C","key_windowBackgroundWhiteGrayText2":"FF9388AD","key_windowBackgroundWhiteGrayIcon":"FF897DA4","key_windowBackgroundWhiteBlueText":"FF7654B7","key_divider":"FFE5DFF0","key_dialogTextBlack":"FF2E2544","key_dialogTextGray3":"FF756A8C","key_chat_messagePanelText":"FF302546","key_chat_messagePanelHint":"FF9287A9","key_chat_messagePanelIcons":"FF84789F","key_chat_serviceBackground":"E6E9E2F2","key_chat_serviceText":"FF5F527C","key_chat_inTimeText":"FF9E94B4","key_chat_outTimeText":"FF8370A8","key_chat_messageLinkIn":"FF7959B8","key_chat_messageLinkOut":"FF704FB0","key_chat_inReplyLine":"FFAA9AD1","key_chat_outReplyLine":"FF9077C7","key_chat_inBubbleSelected":"FFF1ECFA","key_chat_outBubbleSelected":"FFD0C2EF","key_profile_title":"FF2E2544","key_profile_status":"FF756A8C"},
+    {"key_actionBarDefaultIcon":"FFFFFFFF","key_actionBarDefaultSelector":"33565D68","key_windowBackgroundWhiteGrayText":"FF68717D","key_windowBackgroundWhiteGrayText2":"FF89919B","key_windowBackgroundWhiteGrayIcon":"FF7D8792","key_windowBackgroundWhiteBlueText":"FF536E91","key_divider":"FFDDE0E5","key_dialogTextBlack":"FF202632","key_dialogTextGray3":"FF68717D","key_chat_messagePanelText":"FF202632","key_chat_messagePanelHint":"FF858D98","key_chat_messagePanelIcons":"FF727B87","key_chat_serviceBackground":"E6E3E6EB","key_chat_serviceText":"FF565F6C","key_chat_inTimeText":"FF9198A2","key_chat_outTimeText":"FF78879B","key_chat_messageLinkIn":"FF526F94","key_chat_messageLinkOut":"FF49688F","key_chat_inReplyLine":"FF899BB2","key_chat_outReplyLine":"FF748DAE","key_chat_inBubbleSelected":"FFEDF0F4","key_chat_outBubbleSelected":"FFC8D5E6","key_profile_title":"FF202632","key_profile_status":"FF68717D"},
+]
+
+
 class ThemeColorHook(MethodHook):
     def __init__(self, plugin):
         self.plugin = plugin
@@ -102,7 +112,7 @@ class ThemeColorHook(MethodHook):
                 return
             index = int(self.plugin.get_setting("telegram_palette", 0) or 0)
             palette = PALETTES[max(0, min(index, len(PALETTES) - 1))]
-            value = palette.get(key_name)
+            value = palette.get(key_name) or PALETTE_EXTRA[max(0, min(index, len(PALETTE_EXTRA) - 1))].get(key_name)
             if value:
                 color = int(value, 16)
                 if color >= 0x80000000:
@@ -180,7 +190,7 @@ class SayPlugin(BasePlugin):
             if not theme_class:
                 self.logger.warning("Theme class unavailable; color customization disabled.")
                 return
-            for name in PALETTES[0].keys():
+            for name in set(PALETTES[0].keys()) | set(PALETTE_EXTRA[0].keys()):
                 try:
                     field = theme_class.getField(name)
                     self.theme_key_ids[int(field.get(None))] = name
@@ -354,6 +364,14 @@ class SayPlugin(BasePlugin):
             self.logger.exception("Could not refresh Telegram interface after palette change.")
             BulletinHelper.show_error("Не удалось обновить интерфейс: " + str(error)[:120])
 
+    def on_palette_change(self, value):
+        try:
+            self.set_setting("telegram_palette", int(value))
+        except Exception:
+            pass
+        if self.get_setting("telegram_theme_enabled", False):
+            self.apply_theme_palette()
+
     def on_theme_toggle(self, enabled: bool):
         if enabled:
             if not getattr(self, "theme_hooks", None):
@@ -395,7 +413,8 @@ class SayPlugin(BasePlugin):
                    subtext="Только распознанные цвета. Может не поддерживаться отдельными сборками AyuGram.",
                    icon="msg_theme", on_change=self.on_theme_toggle),
             Selector(key="telegram_palette", text="Цветовая палитра", default=0,
-                     items=["Океан", "Мята", "Роза", "Фиолетовый", "Графит"], icon="msg_color"),
+                     items=["Океан", "Мята", "Роза", "Фиолетовый", "Графит"], icon="msg_color",
+                     on_change=self.on_palette_change),
             Text(text="Применить палитру Telegram", subtext="Обновить интерфейс после выбора цвета.",
                  icon="msg_theme", on_click=lambda view: self.apply_theme_palette()),
             Divider(),
