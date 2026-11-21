@@ -8,9 +8,9 @@
     {
       "id": "sayplugin",
       "name": "SayPlugin",
-      "description": "Нативные вкладки чатов с фильтрацией и суммой непрочитанных, расширенная экспериментальная палитра Telegram, архив и инструменты.",
+      "description": "Исправленные нативные вкладки чатов и палитра Telegram через Theme.setColor; архив и инструменты.",
       "author": "@zefut",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "icon": "exteraPlugins/1",
       "app_version": ">=12.5.1",
       "sdk_version": ">=1.4.4.3",
@@ -20,9 +20,9 @@
         "tools"
       ],
       "file": "plugins/sayplugin/sayplugin.plugin",
-      "sha256": "2f5a0987a61188ff5d04dfbfcd049d751079e74c541ba785add7031987973a2c",
-      "size": 56951,
-      "updated_at": "2026-11-21T14:40:00Z"
+      "sha256": "9538095838937c880f4fc1afb95c25149df8279677c3bc3c49125d1169db018a",
+      "size": 57964,
+      "updated_at": "2026-11-21T15:00:00Z"
     }
   ]
 }
