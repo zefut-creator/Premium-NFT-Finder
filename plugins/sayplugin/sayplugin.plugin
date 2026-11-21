@@ -34,14 +34,26 @@ SHORTCUT_RE = re.compile(r"(?<![A-Za-zА-Яа-яЁё0-9_])(;[A-Za-zА-Яа-яЁ�
 
 
 def parse_shortcuts(raw: str) -> Dict[str, str]:
+    """Parse both newline-separated and flattened ;key=value shortcut lists."""
     result = {}
-    for line in (raw or "").splitlines():
+    source = str(raw or "").replace("\\r", "\\n")
+    for line in source.splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
         key, value = key.strip(), value.strip()
         if re.fullmatch(r";[A-Za-zА-Яа-яЁё0-9_]{1,32}", key) and value:
+            result[key] = value[:2000]
+    # A settings editor may flatten line breaks into one string:
+    # ;пр=Привет;спс=Спасибо;пж=Пожалуйста
+    pattern = re.compile(r";[A-Za-zА-Яа-яЁё0-9_]{1,32}=")
+    matches = list(pattern.finditer(source))
+    for index, match in enumerate(matches):
+        key = match.group(0)[:-1]
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(source)
+        value = source[match.end():end].strip(" \\t\\n;")
+        if value:
             result[key] = value[:2000]
     return result
 
