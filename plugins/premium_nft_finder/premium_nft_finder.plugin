@@ -1,0 +1,90 @@
+from typing import Any, Dict
+
+from base_plugin import BasePlugin, MenuItemData, MenuItemType
+from ui.bulletin import BulletinHelper
+
+__id__ = "premium_nft_message_check"
+__name__ = "Premium NFT Message Check"
+__description__ = "Locally classifies the text of the message you select. Does not collect users or save results."
+__author__ = "@zefut"
+__version__ = "1.0.0"
+__icon__ = "exteraPlugins/1"
+__app_version__ = ">=12.5.1"
+__sdk_version__ = ">=1.4.4.3"
+__category__ = ["chats", "tools"]
+
+DIRECT_PREMIUM = (
+    "у меня премиум", "есть премиум", "купил премиум", "оформил премиум",
+    "my premium", "i have premium", "got telegram premium", "bought premium",
+)
+DIRECT_NFT = (
+    "у меня nft", "есть nft", "мой nft", "мои nft", "у меня нфт",
+    "есть нфт", "мой подарок nft", "my nft", "i own nft", "i have nft",
+)
+TOPIC_WORDS = (
+    "premium", "премиум", "nft", "нфт", "подарок", "gift", "коллекционный",
+)
+
+
+def extract_text(message: Any) -> str:
+    """Read text from the one message explicitly selected by the user."""
+    for attr in ("messageText", "message"):
+        try:
+            value = getattr(message, attr, None)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        except Exception:
+            pass
+    try:
+        owner = message.messageOwner
+        value = getattr(owner, "message", None)
+        if isinstance(value, str):
+            return value.strip()
+    except Exception:
+        pass
+    return ""
+
+
+class PremiumNftMessageCheckPlugin(BasePlugin):
+    def on_plugin_load(self):
+        self.add_menu_item(
+            MenuItemData(
+                menu_type=MenuItemType.MESSAGE_CONTEXT_MENU,
+                text="Проверить Premium / NFT",
+                on_click=self.check_selected_message,
+                icon="msg_info",
+                subtext="Анализ только выбранного сообщения",
+                priority=5,
+            )
+        )
+        self.logger.info("Premium NFT Message Check loaded")
+
+    def check_selected_message(self, context: Dict[str, Any]):
+        message = context.get("message")
+        if message is None:
+            BulletinHelper.show_error("Не удалось получить выбранное сообщение.")
+            return
+
+        text = extract_text(message)
+        if not text:
+            BulletinHelper.show_info("В выбранном сообщении нет доступного текста.")
+            return
+
+        lowered = " ".join(text.lower().split())
+        direct = any(phrase in lowered for phrase in DIRECT_PREMIUM + DIRECT_NFT)
+        topic = any(word in lowered for word in TOPIC_WORDS)
+
+        if direct:
+            result = (
+                "100% — есть прямое текстовое заявление о наличии Premium/NFT.\n\n"
+                "Важно: это подтверждает только формулировку сообщения, а не реальное владение."
+            )
+        elif topic:
+            result = (
+                "Сомнительно — Premium/NFT или подарки упоминаются, "
+                "но прямого заявления о наличии нет."
+            )
+        else:
+            result = "Не подтверждено — в тексте нет явного упоминания Premium/NFT."
+
+        BulletinHelper.show_info(result)
