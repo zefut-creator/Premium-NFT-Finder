@@ -363,7 +363,8 @@ class SayPlugin(BasePlugin):
                         lines.append(name + " (USD): 1")
                     elif code in rates:
                         lines.append(f"{name} ({code}): {float(rates[code]):.5g}")
-                lines += ["", "Криптовалюты: BTC — Bitcoin; GRAM — Gram (бывший TON).",
+                lines += ["", "Доступные коды фиатных валют: " + ", ".join(sorted(rates.keys())),
+                          "Криптовалюты: BTC — Bitcoin; GRAM — Gram (бывший TON).",
                           "Обновление фиатных курсов: " + str(data.get("time_last_update_utc", "неизвестно"))]
                 body = "\n".join(lines)
             except Exception as error:
