@@ -1,16 +1,16 @@
 {
   "schema": 1,
-  "name": "Premium NFT Finder",
-  "description": "Локальная проверка текста выбранного сообщения для AyuGram.",
+  "name": "SayPlugin Repository",
+  "description": "Модульный набор инструментов и продуктивности для AyuGram Android.",
   "author": "@zefut",
   "homepage": "https://github.com/zefut-creator/Premium-NFT-Finder",
   "plugins": [
     {
-      "id": "premium_nft_message_check",
-      "name": "Premium NFT Message Check",
-      "description": "Локально проверяет только выбранное сообщение. Не собирает аккаунты и не сохраняет результаты.",
+      "id": "sayplugin",
+      "name": "SayPlugin",
+      "description": "Главное меню, автосокращения, быстрые текстовые команды и личный архив.",
       "author": "@zefut",
-      "version": "1.0.0",
+      "version": "0.1.0",
       "icon": "exteraPlugins/1",
       "app_version": ">=12.5.1",
       "sdk_version": ">=1.4.4.3",
@@ -18,9 +18,9 @@
         "chats",
         "tools"
       ],
-      "file": "plugins/premium_nft_finder/premium_nft_finder.plugin",
-      "sha256": "3dc5aca9b899ffd46f8c6b452db2cc15b181f48282ce392aab64e0d0587a103e",
-      "size": 3578,
+      "file": "plugins/sayplugin/sayplugin.plugin",
+      "sha256": "084ca5c68b62ea8f230039d3465379808b74417d7416aa56048c50aaa8d3ce72",
+      "size": 12022,
       "updated_at": "2026-11-21T06:00:00Z"
     }
   ]
