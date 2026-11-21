@@ -900,8 +900,10 @@ class SayPlugin(BasePlugin):
             f"Личный архив: {'вкл' if self.get_setting('archive_enabled', True) else 'выкл'} ({archive_count} записей)\n"
             f"Очистка пробелов: {'вкл' if self.get_setting('clean_spaces', False) else 'выкл'}\n"
             f"Автозаглавная: {'вкл' if self.get_setting('capitalize_first', False) else 'выкл'}\n"
-            f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\n\n"
-            "Панель и текстовые функции используют документированные API SDK. Перекраска Telegram экспериментальная и требует проверки на конкретной сборке AyuGram."
+            f"Подпись: {'вкл' if self.get_setting('signature_enabled', False) else 'выкл'}\n"
+            f"Вкладки: {'вкл' if self.get_setting('native_chat_tabs_enabled', True) else 'выкл'}\n"
+            f"Цветовая тема: {'вкл' if self.get_setting('telegram_theme_enabled', False) else 'выкл'} ({len(getattr(self, 'theme_key_ids', {}))} ключей)\n\n"
+            "Вкладки заполняются через MessagesController.updateFilterDialogs. Палитра применяется штатным Theme.setColor; обе функции требуют проверки на установленной сборке AyuGram."
         )
         self._show_text_dialog("SayPlugin · Диагностика", status)
 
