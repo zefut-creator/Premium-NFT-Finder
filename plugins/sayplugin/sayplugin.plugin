@@ -18,7 +18,7 @@ __id__ = "sayplugin"
 __name__ = "SayPlugin"
 __description__ = "Модульный центр персонализации, текста, памяти и инструментов для AyuGram."
 __author__ = "@zefut"
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __icon__ = "exteraPlugins/1"
 __app_version__ = ">=12.5.1"
 __sdk_version__ = ">=1.4.4.3"
@@ -96,33 +96,6 @@ PALETTE_EXTRA = [
 ]
 
 
-class ThemeColorHook(MethodHook):
-    def __init__(self, plugin):
-        self.plugin = plugin
-
-    def after_hooked_method(self, param):
-        try:
-            if not self.plugin.get_setting("telegram_theme_enabled", False):
-                return
-            args = param.args
-            if args is None or len(args) < 1:
-                return
-            key_name = self.plugin.theme_key_ids.get(int(args[0]))
-            if not key_name:
-                return
-            index = int(self.plugin.get_setting("telegram_palette", 0) or 0)
-            palette = PALETTES[max(0, min(index, len(PALETTES) - 1))]
-            value = palette.get(key_name) or PALETTE_EXTRA[max(0, min(index, len(PALETTE_EXTRA) - 1))].get(key_name)
-            if value:
-                color = int(value, 16)
-                if color >= 0x80000000:
-                    color -= 0x100000000
-                param.setResult(color)
-        except Exception:
-            return
-
-
-
 class NativeChatTabsHook(MethodHook):
     def __init__(self, plugin):
         self.plugin = plugin
@@ -175,22 +148,20 @@ class SayPlugin(BasePlugin):
             text="Сохранить в SayPlugin", on_click=self.save_selected_message,
             icon="msg_saved", subtext="В личный архив", priority=10,
         ))
-        self.theme_hooks = []
-        self.theme_key_ids = {}
+                self.theme_key_ids = {}
         self.native_chat_tabs_hooks = []
         if self.get_setting("telegram_theme_enabled", False):
-            self.install_theme_hooks()
+            self.prepare_theme_palette()
         self.install_native_chat_tabs_hooks()
-        self.logger.info("SayPlugin 0.5.0 loaded")
+        self.logger.info("SayPlugin 0.5.1 loaded")
 
-    def install_theme_hooks(self):
+    def prepare_theme_palette(self):
         """Prepare native Theme.setColor access; no method hooks are installed."""
         try:
             theme_class = find_class("org.telegram.ui.ActionBar.Theme")
             self.theme_key_ids = {}
             self.theme_class = theme_class
-            self.theme_hooks = []
-            if not theme_class:
+                        if not theme_class:
                 self.logger.warning("Theme class unavailable; color customization disabled.")
                 return
             for name in set(PALETTES[0].keys()) | set(PALETTE_EXTRA[0].keys()):
@@ -371,7 +342,7 @@ class SayPlugin(BasePlugin):
             return
         try:
             if not getattr(self, "theme_key_ids", None):
-                self.install_theme_hooks()
+                self.prepare_theme_palette()
             theme_class = getattr(self, "theme_class", None)
             if not theme_class or not self.theme_key_ids:
                 raise RuntimeError("В этой сборке не найдены поддерживаемые цвета Theme")
@@ -407,7 +378,7 @@ class SayPlugin(BasePlugin):
     def on_theme_toggle(self, enabled: bool):
         if enabled:
             if not getattr(self, "theme_key_ids", None):
-                self.install_theme_hooks()
+                self.prepare_theme_palette()
             if not getattr(self, "theme_key_ids", None):
                 self.set_setting("telegram_theme_enabled", False)
                 BulletinHelper.show_error("Цветовая тема не поддерживается этой сборкой.")
@@ -416,7 +387,7 @@ class SayPlugin(BasePlugin):
         else:
             try:
                 if not getattr(self, "theme_key_ids", None):
-                    self.install_theme_hooks()
+                    self.prepare_theme_palette()
                 theme_class = getattr(self, "theme_class", None)
                 if not theme_class or not self.theme_key_ids:
                     raise RuntimeError("Theme недоступна для сброса цветов")
@@ -523,7 +494,7 @@ class SayPlugin(BasePlugin):
             Header(text="Диагностика"),
             Text(text="Проверить состояние модулей", icon="msg_info", on_click=lambda view: self.show_module_status()),
             Text(text="О возможностях и ограничениях", icon="msg_help", on_click=lambda view: self.show_about()),
-            Text(text="Версия SayPlugin 0.5.0", subtext="Для полной проверки нужна диагностика на установленной сборке AyuGram."),
+            Text(text="Версия SayPlugin 0.5.1", subtext="Для полной проверки нужна диагностика на установленной сборке AyuGram."),
         ]
 
     def _confirm_clear_archive_from_settings(self):
@@ -914,7 +885,7 @@ class SayPlugin(BasePlugin):
         shortcuts = parse_shortcuts(self.get_setting("shortcuts", DEFAULT_SHORTCUTS))
         templates = parse_shortcuts(self.get_setting("templates", ""))
         status = (
-            "SayPlugin 0.5.0\n\n"
+            "SayPlugin 0.5.1\n\n"
             f"Текстовый движок: {'вкл' if self.get_setting('macros_enabled', True) else 'выкл'}\n"
             f"Автосокращения: {'вкл' if self.get_setting('shortcuts_enabled', True) else 'выкл'} ({len(shortcuts) + len(templates)} ключей)\n"
             f"Личный архив: {'вкл' if self.get_setting('archive_enabled', True) else 'выкл'} ({archive_count} записей)\n"
@@ -930,6 +901,6 @@ class SayPlugin(BasePlugin):
             "SayPlugin — модульный набор инструментов для AyuGram Android. Данные архива и настроек остаются в локальном хранилище плагина. Плагин не читает списки участников и не собирает чужие личные данные.")
 
     def help_text(self):
-        return ("SayPlugin 0.5.0\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
+        return ("SayPlugin 0.5.1\nКоманды: .saydate, .saytime, .sayupper, .saylower, .saytitle, "
                 ".sayclean, .sayreverse, .sayquote, .saybullets, .saylen.\n.sayfind слово — поиск в архиве; .sayarchive — открыть архив. Эти две команды выполняются локально.\n"
                 "Открой SayPlugin в меню Telegram для доступа к разделам.")
