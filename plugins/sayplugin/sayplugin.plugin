@@ -311,6 +311,9 @@ class SayPlugin(BasePlugin):
                 target.order = insert_at
                 target.locked = False
                 filters.add(insert_at, target)
+                # DialogsAdapter reads DialogFilter.dialogs, not the controller's
+                # allDialogs list. Populate the native filtered lists explicitly.
+                controller.updateFilterDialogs(target)
                 insert_at += 1
             self._update_native_filter_unread(activity, controller, filters)
         except Exception:
