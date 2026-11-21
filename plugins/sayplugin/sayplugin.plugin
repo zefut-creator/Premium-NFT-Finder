@@ -311,7 +311,8 @@ class SayPlugin(BasePlugin):
             (("🧪 " if emoji else "") + "Лаборатория"),
             (("📊 " if emoji else "") + "Статус и диагностика"),
         ]
-        density = int(self.get_setting("dashboard_density", 1) or 1)
+        density_value = self.get_setting("dashboard_density", 1)
+        density = int(1 if density_value is None else density_value)
         if density == 0:
             items = items[:5]
         def on_item_click(builder, which):
@@ -412,7 +413,8 @@ class SayPlugin(BasePlugin):
         archive.insert(0, {"text": text[:4000], "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
                            "message_id": message_id, "dialog_id": dialog_id, "favorite": False})
         limits = [100, 300, 500]
-        limit_index = int(self.get_setting("archive_limit", 1) or 1)
+        limit_value = self.get_setting("archive_limit", 1)
+        limit_index = int(1 if limit_value is None else limit_value)
         limit = limits[max(0, min(limit_index, 2))]
         self.set_setting("archive_json", json.dumps(archive[:limit], ensure_ascii=False))
         BulletinHelper.show_info("Сохранено в личный архив SayPlugin.")
@@ -434,7 +436,8 @@ class SayPlugin(BasePlugin):
 
     def show_appearance(self):
         density = ["Компактная", "Обычная", "Подробная"]
-        index = int(self.get_setting("dashboard_density", 1) or 1)
+        density_value = self.get_setting("dashboard_density", 1)
+        index = int(1 if density_value is None else density_value)
         self._show_text_dialog("Внешний вид Telegram и SayPlugin",
             f"Стиль панели: {density[max(0, min(index, 2))]}\n"
             f"Иконки: {'включены' if self.get_setting('dashboard_emoji', True) else 'выключены'}\n"
