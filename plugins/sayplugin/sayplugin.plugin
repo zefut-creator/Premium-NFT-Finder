@@ -148,7 +148,7 @@ class SayPlugin(BasePlugin):
             text="Сохранить в SayPlugin", on_click=self.save_selected_message,
             icon="msg_saved", subtext="В личный архив", priority=10,
         ))
-                self.theme_key_ids = {}
+        self.theme_key_ids = {}
         self.native_chat_tabs_hooks = []
         if self.get_setting("telegram_theme_enabled", False):
             self.prepare_theme_palette()
@@ -161,7 +161,7 @@ class SayPlugin(BasePlugin):
             theme_class = find_class("org.telegram.ui.ActionBar.Theme")
             self.theme_key_ids = {}
             self.theme_class = theme_class
-                        if not theme_class:
+            if not theme_class:
                 self.logger.warning("Theme class unavailable; color customization disabled.")
                 return
             for name in set(PALETTES[0].keys()) | set(PALETTE_EXTRA[0].keys()):
